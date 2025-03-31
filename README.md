@@ -1,2 +1,2 @@
 # aisean
-AI powered football predictions app
+AI powered football predictions web app
