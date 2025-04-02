@@ -1,0 +1,459 @@
+/* Date picker input styling */
+.ep-date-input {
+  margin-right: 0.5rem;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background-color: var(--card-bg);
+  color: var(--text);
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.ep-date-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+[data-theme="dark"] .ep-date-input:focus {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
+}
+
+.ep-date-selector {
+  display: flex;
+  align-items: center;
+}
+
+/* Sticky date info container */
+.ep-date-info {
+  position: sticky;
+  top: 64px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background-color: var(--header-bg);
+  border-radius: 0 0 8px 8px;
+  box-shadow: var(--shadow);
+  color: var(--text);
+  font-weight: 500;
+}
+
+.ep-date-info i {
+  margin-right: 10px;
+  color: var(--primary);
+}
+
+@media (max-width: 768px) {
+  .ep-date-info {
+    top: 56px;
+  }
+}
+
+/* Prediction container for mobile padding */
+.ep-prediction-container {
+  padding: 0 12px;
+}
+
+@media (min-width: 768px) {
+  .ep-prediction-container {
+    padding: 0;
+  }
+}
+
+/* Prediction cards styles - updated to grid layout */
+.ep-prediction-cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+@media (min-width: 768px) {
+  .ep-prediction-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1200px) {
+  .ep-prediction-cards {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.ep-prediction-card {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.ep-prediction-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Gradient header for prediction card */
+.ep-match-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: 10px 10px 0 0;
+  color: #fff;
+  background: linear-gradient(90deg, #000000, #333333);
+}
+
+[data-theme="dark"] .ep-match-header {
+  background: linear-gradient(90deg, #444444, #222222);
+}
+
+/* Match time & meta information */
+.ep-match-time, .ep-match-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+}
+
+.ep-match-status {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  background-color: var(--divider);
+  color: var(--text-secondary);
+}
+
+.ep-match-result {
+  font-weight: 700;
+  font-size: 1rem;
+  color: white; /* Ensure visibility in both light and dark mode */
+  margin-left: 8px;
+}
+
+.ep-teams {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 12px 0;
+  padding: 0 16px;
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+
+.ep-vs {
+  margin: 0 10px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: normal;
+}
+
+/* Classic prediction area */
+.ep-classic-prediction {
+  padding: 16px;
+  background-color: var(--background);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--divider);
+}
+
+.ep-prediction-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.ep-prediction-details {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.ep-prediction-badge {
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  background-color: var(--divider);
+  color: var(--text);
+}
+
+.ep-prediction-odd {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.ep-prediction-status {
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  text-transform: capitalize;
+  color: var(--text-secondary);
+}
+
+/* Toggle button for expandable predictions */
+.ep-toggle-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 8px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.ep-toggle-btn:hover {
+  color: var(--text);
+  background-color: var(--divider);
+}
+
+.ep-toggle-btn svg {
+  width: 20px;
+  height: 20px;
+  transition: transform 0.3s ease;
+}
+
+.ep-toggle-btn.ep-active svg {
+  transform: rotate(180deg);
+}
+
+/* Expandable predictions container */
+.ep-other-predictions {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-in-out;
+  margin-top: auto;
+}
+
+.ep-other-predictions.ep-expanded {
+  max-height: 500px;
+}
+
+.ep-other-predictions-content {
+  padding: 16px;
+  background-color: var(--card-bg);
+}
+
+.ep-prediction-item {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.ep-prediction-item:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+/* Icon styling */
+.ep-icon {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  stroke-width: 2;
+  stroke: currentColor;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Empty state styling */
+.ep-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.ep-empty-state i {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+.ep-empty-state h3 {
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.ep-empty-state p {
+  max-width: 300px;
+}
+
+/* Enhanced Skeleton Animation */
+.ep-skeleton-container {
+  width: 100%;
+}
+
+.ep-skeleton-cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+@media (min-width: 768px) {
+  .ep-skeleton-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1200px) {
+  .ep-skeleton-cards {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.ep-skeleton-card {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  height: 100%;
+}
+
+.ep-skeleton-header {
+  height: 50px;
+  background-color: var(--divider);
+  margin-bottom: 15px;
+}
+
+.ep-skeleton-teams {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 16px;
+  margin-bottom: 15px;
+}
+
+.ep-skeleton-team {
+  height: 20px;
+  width: 100px;
+  background-color: var(--divider);
+  border-radius: 4px;
+}
+
+.ep-skeleton-vs {
+  width: 20px;
+  height: 15px;
+  margin: 0 10px;
+  background-color: var(--divider);
+  border-radius: 4px;
+}
+
+.ep-skeleton-prediction {
+  padding: 16px;
+  border-top: 1px solid var(--divider);
+}
+
+.ep-skeleton-title {
+  height: 15px;
+  width: 120px;
+  background-color: var(--divider);
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
+
+.ep-skeleton-details {
+  display: flex;
+  gap: 10px;
+}
+
+.ep-skeleton-badge {
+  height: 20px;
+  width: 80px;
+  background-color: var(--divider);
+  border-radius: 20px;
+}
+
+.ep-skeleton-odd {
+  height: 20px;
+  width: 60px;
+  background-color: var(--divider);
+  border-radius: 4px;
+}
+
+/* Shimmer animation */
+.ep-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.ep-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0,
+    rgba(255, 255, 255, 0.2) 20%,
+    rgba(255, 255, 255, 0.5) 60%,
+    rgba(255, 255, 255, 0)
+  );
+  animation: shimmer 2s infinite;
+}
+
+[data-theme="dark"] .ep-shimmer::after {
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0,
+    rgba(255, 255, 255, 0.05) 20%,
+    rgba(255, 255, 255, 0.1) 60%,
+    rgba(255, 255, 255, 0)
+  );
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Status-Based Colors */
+.ep-status-won {
+  background-color: var(--success);
+  color: white;
+  border-left: none !important;
+}
+
+.ep-status-lost {
+  background-color: var(--danger);
+  color: white;
+  border-left: none !important;
+}
+
+.ep-status-postponed {
+  background-color: var(--warning);
+  color: white;
+  border-left: none !important;
+}
+
+.ep-status-pending {
+  background-color: var(--divider);
+  color: var(--text-secondary);
+  border-left: none !important;
+}
