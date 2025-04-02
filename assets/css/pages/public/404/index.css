@@ -1,0 +1,286 @@
+/* NotFound Page Styling */
+.notfound-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 64px);
+  padding: 2rem;
+  background-color: var(--background);
+}
+
+.notfound-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 550px;
+  padding: 3rem;
+  border-radius: 1rem;
+  background-color: var(--card-bg);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  animation: fadeIn 0.6s ease-out;
+}
+
+.notfound-icon {
+  font-size: 4.5rem;
+  color: var(--warning);
+  margin-bottom: 1.5rem;
+  animation: pulse 2s infinite;
+}
+
+.notfound-content h2 {
+  font-size: 2.5rem;
+  color: var(--text);
+  margin-bottom: 1rem;
+  font-weight: 700;
+}
+
+.notfound-content p {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  margin-bottom: 2rem;
+  line-height: 1.5;
+}
+
+.notfound-action-buttons {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.btn {
+  padding: 0.8rem 1.5rem;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  outline: none;
+}
+
+.btn i {
+  margin-right: 0.5rem;
+}
+
+.btn-primary {
+  background-color: var(--primary);
+  color: var(--text-primary);
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+}
+
+.btn-secondary {
+  background-color: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.btn-secondary:hover {
+  background-color: var(--menu-hover);
+  transform: translateY(-2px);
+}
+
+.notfound-illustration {
+  margin-top: 1rem;
+  width: 240px;
+  height: 160px;
+  position: relative;
+  margin-bottom: 2rem;
+}
+
+.notfound-path {
+  width: 100%;
+  height: 30px;
+  background-color: var(--divider);
+  border-radius: 30px;
+  position: absolute;
+  bottom: 0;
+}
+
+.notfound-signpost {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 15px;
+  height: 80px;
+  background-color: var(--text-secondary);
+}
+
+.notfound-sign-left, .notfound-sign-right {
+  position: absolute;
+  background-color: var(--primary);
+  color: var(--text-primary);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.notfound-sign-left {
+  left: 40px;
+  top: 40px;
+  transform: rotate(-20deg);
+}
+
+.notfound-sign-right {
+  right: 40px;
+  top: 25px;
+  transform: rotate(15deg);
+}
+
+.notfound-character {
+  position: absolute;
+  bottom: 30px;
+  left: 30%;
+  width: 40px;
+  height: 60px;
+  background-color: var(--text);
+  border-radius: 50% 50% 0 0;
+  display: flex;
+  justify-content: center;
+}
+
+.notfound-character::before {
+  content: "?";
+  color: var(--background);
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .notfound-container {
+    padding: 1rem;
+    min-height: calc(100vh - 48px);
+  }
+  
+  .notfound-content {
+    padding: 1.5rem;
+    max-width: 100%;
+    margin: 0;
+  }
+  
+  .notfound-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+  
+  .notfound-content h2 {
+    font-size: 1.75rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .notfound-content p {
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .notfound-action-buttons {
+    width: 100%;
+    gap: 0.75rem;
+    flex-direction: column;
+  }
+  
+  .btn {
+    padding: 0.7rem 1rem;
+    width: 100%;
+    font-size: 0.95rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .btn i {
+    margin-right: 0.4rem;
+  }
+  
+  .notfound-illustration {
+    width: 180px;
+    height: 120px;
+    margin-bottom: 1.5rem;
+  }
+  
+  .notfound-sign-left {
+    left: 35px;
+    top: 30px;
+    font-size: 0.8rem;
+    padding: 6px 10px;
+  }
+  
+  .notfound-sign-right {
+    right: 35px;
+    top: 20px;
+    font-size: 0.8rem;
+    padding: 6px 10px;
+  }
+  
+  .notfound-character {
+    width: 30px;
+    height: 45px;
+  }
+  
+  .notfound-character::before {
+    font-size: 1.2rem;
+  }
+}
+
+/* Further optimizations for very small screens */
+@media (max-width: 350px) {
+  .notfound-container {
+    padding: 0.5rem;
+  }
+  
+  .notfound-content {
+    padding: 1rem;
+  }
+  
+  .notfound-icon {
+    font-size: 2.5rem;
+  }
+  
+  .notfound-content h2 {
+    font-size: 1.5rem;
+  }
+  
+  .notfound-content p {
+    font-size: 0.9rem;
+  }
+  
+  .notfound-illustration {
+    width: 150px;
+    height: 100px;
+    margin-bottom: 1rem;
+  }
+  
+  .btn {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.85rem;
+  }
+  
+  .btn-text-short {
+    display: inline-block;
+  }
+  
+  .btn-text-full {
+    display: none;
+  }
+}
