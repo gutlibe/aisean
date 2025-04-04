@@ -1,4 +1,4 @@
-import { Page } from '../../core/page.js';
+import { Page } from '../../../core/page.js';
 
 /**
  * ExpertPredictions - Page for displaying football match predictions by date
