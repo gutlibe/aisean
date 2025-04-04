@@ -3,38 +3,34 @@ import javascriptObfuscator from 'rollup-plugin-javascript-obfuscator';
 
 export default defineConfig({
   root: '.',
-  publicDir: 'public', // Ensure assets/img is moved here -> public/assets/img
+  publicDir: 'public', // Vite copies contents of 'public' to the root of 'dist'
 
   build: {
     outDir: 'dist',
-    sourcemap: false, // Disable sourcemaps for production/obfuscation
+    sourcemap: false,
+    // We are disabling Vite's CSS handling here since we copy it manually
+    // and minify with a separate script.
+    cssCodeSplit: false, // Prevent Vite from trying to split CSS
+    assetsInlineLimit: 0, // Prevent inlining small assets
 
     rollupOptions: {
       input: {
         main: 'index.html'
       },
       output: {
-        // Hashed filenames for JS (entry and chunks)
+        // JS output hashing remains
         entryFileNames: `assets/js/[name].[hash].js`,
         chunkFileNames: `assets/js/[name].[hash].js`,
-        // Hashed filenames for other assets (like CSS)
-        // CSS will be output as separate files in dist/assets/css/
-        assetFileNames: (assetInfo) => {
-          // Separate CSS into its own folder structure
-          if (assetInfo.name.endsWith('.css')) {
-            return 'assets/css/[name].[hash].[ext]';
-          }
-          // Handle other assets like fonts or images processed by rollup
-          return 'assets/[ext]/[name].[hash].[ext]';
-        },
+        // Generic rule for non-JS/non-CSS assets (fonts, etc.) IF processed by Rollup
+        // CSS is handled by the publicDir copy + minify script
+        assetFileNames: `assets/[ext]/[name].[hash].[ext]`,
       },
       plugins: [
-        // Obfuscator plugin - configured to ONLY target your JS
         javascriptObfuscator({
-          include: ["**/assets/js/**/*.js"], // IMPORTANT: Target only your JS files
-          exclude: ["node_modules/**"],     // Exclude dependencies
-
-          // Strong Obfuscation Options (Test Thoroughly!)
+          // Target ONLY JS files
+          include: ["**/assets/js/**/*.js"],
+          exclude: ["node_modules/**"],
+          // Your original obfuscation options
           options: {
             compact: true,
             controlFlowFlattening: true,
@@ -66,11 +62,15 @@ export default defineConfig({
             transformObjectKeys: true,
             unicodeEscapeSequence: false,
             target: 'browser',
-            sourceMap: false, // Ensure no sourcemap for obfuscated code
+            sourceMap: false,
           }
         })
       ]
     }
+  },
+  // Ensure CSS isn't processed in dev server in a way that breaks build logic
+  css: {
+    preprocessorOptions: {}, // Avoid specific preprocessor actions
   },
   server: {
     open: true
