@@ -1,0 +1,184 @@
+.splash-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--background);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 10010;
+    transition: opacity 0.7s cubic-bezier(0.19, 1, 0.22, 1);
+    overflow: hidden;
+    -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.splash-screen.hide {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.gtlnk-layout {
+    display: none;
+}
+
+.global-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: var(--background);
+    z-index: 9999;
+}
+
+.loader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    max-width: 90%;
+    position: relative;
+}
+
+.shimmer-container {
+    position: relative;
+    display: inline-block;
+    margin-bottom: 20px;
+    overflow: hidden;
+    border-radius: 4px;
+}
+
+.shimmer-text {
+    font-family: 'Arial', sans-serif;
+    font-size: 80px;
+    font-weight: 900;
+    letter-spacing: -1px;
+    margin: 0;
+    padding: 10px;
+    background: linear-gradient(
+        45deg,
+        var(--primary) 0%,
+        var(--success) 25%,
+        var(--warning) 50%,
+        var(--primary) 75%,
+        var(--success) 100%
+    );
+    background-size: 300% 300%;
+    color: transparent;
+    -webkit-background-clip: text;
+    background-clip: text;
+    animation: gradient-shift 5s ease infinite;
+}
+
+.shimmer-effect {
+    position: absolute;
+    top: 0;
+    left: -40%; /* Adjusted starting position */
+    width: 20%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.6) 50%,
+        rgba(255, 255, 255, 0) 100%
+    );
+    transform: skewX(-20deg);
+    animation: shimmer-sweep 2.5s linear infinite; /* Adjusted easing */
+    animation-delay: 0.1s; /* Added slight delay */
+}
+
+[data-theme="dark"] .shimmer-effect {
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.3) 50%,
+        rgba(255, 255, 255, 0) 100%
+    );
+}
+
+.loader-tagline {
+    font-family: 'Arial', sans-serif;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text);
+    margin-top: 10px;
+    margin-bottom: 15px;
+}
+
+.progress-circles {
+    display: flex;
+    gap: 8px;
+}
+
+.progress-circle {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--text-secondary);
+    animation: pulse-fade 1.5s infinite;
+}
+
+.progress-circle:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.progress-circle:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes gradient-shift {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+@keyframes shimmer-sweep {
+    0% {
+        left: -40%;
+    }
+    100% {
+        left: 120%;
+    }
+}
+
+@keyframes pulse-fade {
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 0.3;
+    }
+    50% {
+        transform: scale(1.2);
+        opacity: 1;
+    }
+}
+
+@media (max-width: 768px) {
+    .shimmer-text {
+        font-size: 60px;
+    }
+}
+
+@media (max-width: 480px) {
+    .shimmer-text {
+        font-size: 48px;
+    }
+    .loader-tagline {
+        font-size: 14px;
+    }
+}
