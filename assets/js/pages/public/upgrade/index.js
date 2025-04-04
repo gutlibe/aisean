@@ -1,4 +1,4 @@
-import { Page } from "../../core/page.js"
+import { Page } from "../../../core/page.js"
 import paymentProcessor from "./utils/payment-processor.js"
 
 export class UpgradePage extends Page {
