@@ -1,17 +1,28 @@
 import { defineConfig } from 'vite';
 import javascriptObfuscator from 'rollup-plugin-javascript-obfuscator';
-
 export default defineConfig({
   root: '.',
   publicDir: 'public',
   build: {
     outDir: 'dist',
     sourcemap: false,
-    // Completely remove Vite's default CSS processing attempts
     cssCodeSplit: false,
     assetsInlineLimit: 0,
+    minify: 'terser', // Add Terser for additional minification
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+        pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.warn']
+      },
+      mangle: {
+        properties: {
+          regex: /^_/  // Mangle property names starting with underscore
+        }
+      }
+    },
     modulePreload: {
-      polyfill: false // May reduce startup code if not needed
+      polyfill: false
     },
     rollupOptions: {
       input: {
@@ -20,7 +31,6 @@ export default defineConfig({
       output: {
         entryFileNames: `assets/js/[name].[hash].js`,
         chunkFileNames: `assets/js/[name].[hash].js`,
-        // Let publicDir handle CSS/IMG. This handles other assets if any.
         assetFileNames: `assets/[ext]/[name].[hash].[ext]`,
       },
       plugins: [
@@ -33,53 +43,59 @@ export default defineConfig({
             simplify: true,
             target: 'browser',
             log: false,
-            renameGlobals: false,
-
-            // --- Obfuscation Strength (Harder) ---
+            renameGlobals: true, // Changed to true to rename global variables
+            
+            // --- Obfuscation Strength (Maximum) ---
             controlFlowFlattening: true,
-            controlFlowFlatteningThreshold: 0.85, // Increased slightly
+            controlFlowFlatteningThreshold: 1, // Maximum control flow obfuscation
             deadCodeInjection: true,
-            deadCodeInjectionThreshold: 0.5, // Increased slightly
-            selfDefending: true, // Makes tampering harder
-
+            deadCodeInjectionThreshold: 0.7, // More dead code
+            selfDefending: true,
+            
             // --- Identifier/Variable Naming ---
-            identifierNamesGenerator: 'hexadecimal',
-            transformObjectKeys: true, // Renames object keys where possible
-
-            // --- String Manipulation (More Aggressive for HTML etc.) ---
+            identifierNamesGenerator: 'mangled', // 'mangled' creates shorter, confusing names
+            identifiersPrefix: '_0x', // Prefix all variables with confusing sequence
+            transformObjectKeys: true,
+            
+            // --- String Manipulation (Maximum Obfuscation) ---
             stringArray: true,
-            stringArrayThreshold: 1, // Force most strings into the array
+            stringArrayThreshold: 1,
             splitStrings: true,
-            splitStringsChunkLength: 8, // Smaller chunks for HTML/long strings
-            stringArrayEncoding: ['base64'],
-            stringArrayWrappersCount: 4, // More wrappers
+            splitStringsChunkLength: 3, // Even smaller chunks for maximum obfuscation
+            stringArrayEncoding: ['rc4'], // More complex encoding
+            stringArrayWrappersCount: 5, // More wrappers
             stringArrayWrappersChainedCalls: true,
-            stringArrayWrappersParametersMaxCount: 4,
-            stringArrayWrappersType: 'function',
+            stringArrayWrappersParametersMaxCount: 5,
+            stringArrayWrappersType: 'variable',
             stringArrayIndexShift: true,
             stringArrayRotate: true,
             stringArrayShuffle: true,
-            unicodeEscapeSequence: true, // Makes string content less readable
-
+            unicodeEscapeSequence: true,
+            
             // --- Protecting CSS Paths ---
             reservedStrings: [
-              '\\.css$', // Reserve strings ENDING with .css
-              '\\/assets\\/css\\/' // Reserve strings containing the CSS path base
+              '\\.css$',
+              '\\/assets\\/css\\/'
             ],
-
-            // --- Other ---
+            
+            // --- Other Advanced Obfuscation ---
             numbersToExpressions: true,
             disableConsoleOutput: true,
-            debugProtection: false, // Keep false for performance unless needed
-            debugProtectionInterval: 0,
+            domainLock: [], // Optionally add domains where code is allowed to run
+            forceTransformStrings: [], // Force transform specific strings
+            debugProtection: true, // Enable to prevent debugging
+            debugProtectionInterval: 4000, // Aggressive debug protection
             sourceMap: false,
+            seed: Math.random() * 10000000, // Random seed for more unpredictable obfuscation
+            
+            // --- New Options ---
+            transformObjectKeys: true, // Obfuscate object keys too
+            optionsPreset: 'high-obfuscation' // Use preset high obfuscation
           }
         })
       ]
     }
   },
-  // Remove Vite's explicit CSS block entirely to prevent interference
-  // css: { ... },
   server: {
     open: true
   }
