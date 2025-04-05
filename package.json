@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build:vite": "vite build",
-    "minify-css": "lightningcss --minify --bundle --targets '>= 0.25%' 'dist/assets/css/**/*.css' -d dist/assets/css",
+    "minify-css": "lightningcss --minify --bundle --targets '>= 0.25%' public/assets/css/**/*.css -d dist/assets/css",
     "build": "npm run build:vite && npm run minify-css",
     "preview": "vite preview"
   },
