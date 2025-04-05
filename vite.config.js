@@ -8,19 +8,8 @@ export default defineConfig({
     sourcemap: false,
     cssCodeSplit: false,
     assetsInlineLimit: 0,
-    minify: 'terser', // Add Terser for additional minification
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-        pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.warn']
-      },
-      mangle: {
-        properties: {
-          regex: /^_/  // Mangle property names starting with underscore
-        }
-      }
-    },
+    // Remove terser minification since it's not installed
+    minify: false,
     modulePreload: {
       polyfill: false
     },
@@ -31,7 +20,13 @@ export default defineConfig({
       output: {
         entryFileNames: `assets/js/[name].[hash].js`,
         chunkFileNames: `assets/js/[name].[hash].js`,
-        assetFileNames: `assets/[ext]/[name].[hash].[ext]`,
+        assetFileNames: (assetInfo) => {
+          // Don't process CSS files - just copy them
+          if (assetInfo.name.endsWith('.css')) {
+            return 'assets/css/[name].[ext]';
+          }
+          return `assets/[ext]/[name].[hash].[ext]`;
+        },
       },
       plugins: [
         javascriptObfuscator({
@@ -43,27 +38,26 @@ export default defineConfig({
             simplify: true,
             target: 'browser',
             log: false,
-            renameGlobals: true, // Changed to true to rename global variables
+            renameGlobals: true,
             
             // --- Obfuscation Strength (Maximum) ---
             controlFlowFlattening: true,
-            controlFlowFlatteningThreshold: 1, // Maximum control flow obfuscation
+            controlFlowFlatteningThreshold: 1,
             deadCodeInjection: true,
-            deadCodeInjectionThreshold: 0.7, // More dead code
+            deadCodeInjectionThreshold: 0.7,
             selfDefending: true,
             
             // --- Identifier/Variable Naming ---
-            identifierNamesGenerator: 'mangled', // 'mangled' creates shorter, confusing names
-            identifiersPrefix: '_0x', // Prefix all variables with confusing sequence
-            transformObjectKeys: true,
+            identifierNamesGenerator: 'mangled',
+            identifiersPrefix: '_0x',
             
             // --- String Manipulation (Maximum Obfuscation) ---
             stringArray: true,
             stringArrayThreshold: 1,
             splitStrings: true,
-            splitStringsChunkLength: 3, // Even smaller chunks for maximum obfuscation
-            stringArrayEncoding: ['rc4'], // More complex encoding
-            stringArrayWrappersCount: 5, // More wrappers
+            splitStringsChunkLength: 3,
+            stringArrayEncoding: ['rc4'],
+            stringArrayWrappersCount: 5,
             stringArrayWrappersChainedCalls: true,
             stringArrayWrappersParametersMaxCount: 5,
             stringArrayWrappersType: 'variable',
@@ -81,20 +75,17 @@ export default defineConfig({
             // --- Other Advanced Obfuscation ---
             numbersToExpressions: true,
             disableConsoleOutput: true,
-            domainLock: [], // Optionally add domains where code is allowed to run
-            forceTransformStrings: [], // Force transform specific strings
-            debugProtection: true, // Enable to prevent debugging
-            debugProtectionInterval: 4000, // Aggressive debug protection
+            transformObjectKeys: true, // Now only appears once
+            debugProtection: true,
+            debugProtectionInterval: 4000,
             sourceMap: false,
-            seed: Math.random() * 10000000, // Random seed for more unpredictable obfuscation
-            
-            // --- New Options ---
-            transformObjectKeys: true, // Obfuscate object keys too
-            optionsPreset: 'high-obfuscation' // Use preset high obfuscation
+            seed: Math.random() * 10000000,
           }
         })
       ]
-    }
+    },
+    // Copy CSS files directly without processing them
+    emptyOutDir: true, // Make sure dist is clean before building
   },
   server: {
     open: true
