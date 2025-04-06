@@ -24,43 +24,37 @@ export default defineConfig({
       },
       plugins: [
         javascriptObfuscator({
-          // Target only JS files under assets/js using a precise glob
-          include: ["**/assets/js/**/*.js"],
-          exclude: ["node_modules/**"],
-          options: {
-            compact: true,
-            controlFlowFlattening: true,
-            controlFlowFlatteningThreshold: 0.9,
-            deadCodeInjection: true,
-            deadCodeInjectionThreshold: 0.6,
-            debugProtection: false,
-            debugProtectionInterval: 0,
-            disableConsoleOutput: true,
-            identifierNamesGenerator: 'hexadecimal',
-            log: false,
-            numbersToExpressions: true,
-            renameGlobals: false, // Safer to not rename global identifiers
-            selfDefending: true,
-            simplify: true,
-            splitStrings: true,
-            splitStringsChunkLength: 15,
-            stringArray: true,
-            stringArrayCallsTransform: true,
-            stringArrayEncoding: ['base64'],
-            stringArrayIndexShift: true,
-            stringArrayRotate: true,
-            stringArrayShuffle: true,
-            stringArrayWrappersCount: 3,
-            stringArrayWrappersChainedCalls: true,
-            stringArrayWrappersParametersMaxCount: 5,
-            stringArrayWrappersType: 'function',
-            stringArrayThreshold: 0.9,
-            transformObjectKeys: true,
-            unicodeEscapeSequence: false,
-            target: 'browser',
-            sourceMap: false,
-          }
-        })
+  include: ["**/assets/js/**/*.js"],
+  exclude: ["node_modules/**"],
+  options: {
+    compact: true,
+    controlFlowFlattening: true,
+    controlFlowFlatteningThreshold: 0.9,
+    deadCodeInjection: true,
+    deadCodeInjectionThreshold: 0.6,
+    disableConsoleOutput: true,
+    identifierNamesGenerator: 'hexadecimal',
+    selfDefending: true,
+    simplify: true,
+    splitStrings: true, // <-- already enabled
+    splitStringsChunkLength: 5, // <-- reduce this to make HTML unreadable
+    stringArray: true,
+    stringArrayEncoding: ['base64'], // <-- ensure string array is encoded
+    stringArrayIndexShift: true,
+    stringArrayRotate: true,
+    stringArrayShuffle: true,
+    stringArrayWrappersCount: 5, // <-- higher wrapper count adds complexity
+    stringArrayWrappersChainedCalls: true,
+    stringArrayWrappersParametersMaxCount: 5,
+    stringArrayWrappersType: 'function',
+    stringArrayThreshold: 1, // <-- 100% of strings should be obfuscated
+    transformObjectKeys: true,
+    unicodeEscapeSequence: true, // <-- convert characters to unicode escapes
+    target: 'browser',
+    sourceMap: false,
+  }
+})
+
       ]
     }
   },
