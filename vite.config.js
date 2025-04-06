@@ -1,77 +1,97 @@
 import { defineConfig } from 'vite';
 import javascriptObfuscator from 'rollup-plugin-javascript-obfuscator';
 
+// Define your obfuscation options as a separate object
+const obfuscatorOptions = {
+  compact: true,
+  controlFlowFlattening: true,
+  controlFlowFlatteningThreshold: 0.75,
+  deadCodeInjection: true,
+  deadCodeInjectionThreshold: 0.4,
+  debugProtection: false,
+  debugProtectionInterval: 0,
+  disableConsoleOutput: true,
+  domainLock: [],
+  domainLockRedirectUrl: 'about:blank',
+  forceTransformStrings: [],
+  identifierNamesCache: null,
+  identifierNamesGenerator: 'hexadecimal',
+  identifiersDictionary: [],
+  identifiersPrefix: '',
+  ignoreImports: false,
+  inputFileName: '',
+  log: false,
+  numbersToExpressions: false,
+  optionsPreset: 'default',
+  renameGlobals: true,
+  renameProperties: true,
+  renamePropertiesMode: 'safe',
+  reservedNames: [],
+  reservedStrings: [],
+  seed: 0,
+  selfDefending: true,
+  simplify: true,
+  sourceMap: false,
+  sourceMapBaseUrl: '',
+  sourceMapFileName: '',
+  sourceMapMode: 'separate',
+  sourceMapSourcesMode: 'sources-content',
+  splitStrings: true,
+  splitStringsChunkLength: 10,
+  stringArray: true,
+  stringArrayCallsTransform: true,
+  stringArrayCallsTransformThreshold: 0.5,
+  stringArrayEncoding: ['base64'],
+  stringArrayIndexesType: ['hexadecimal-number'],
+  stringArrayIndexShift: true,
+  stringArrayRotate: true,
+  stringArrayShuffle: true,
+  stringArrayWrappersCount: 2,
+  stringArrayWrappersChainedCalls: true,
+  stringArrayWrappersParametersMaxCount: 2,
+  stringArrayWrappersType: 'variable',
+  stringArrayThreshold: 0.75,
+  target: 'browser',
+  transformObjectKeys: true,
+  unicodeEscapeSequence: true
+};
+
+// Log the final obfuscator options so you can verify them in your CI logs
+console.log("Final Obfuscation Options:", JSON.stringify(obfuscatorOptions, null, 2));
+
 export default defineConfig({
   root: '.',
-  publicDir: 'public', // Ensure assets/img is moved here -> public/assets/img
+  publicDir: 'public',
 
   build: {
     outDir: 'dist',
-    sourcemap: false, // Disable sourcemaps for production/obfuscation
+    sourcemap: false,
+    cssCodeSplit: false,
+    assetsInlineLimit: 0,
 
     rollupOptions: {
       input: {
         main: 'index.html'
       },
       output: {
-        // Hashed filenames for JS (entry and chunks)
         entryFileNames: `assets/js/[name].[hash].js`,
         chunkFileNames: `assets/js/[name].[hash].js`,
-        // Hashed filenames for other assets (like CSS)
-        // CSS will be output as separate files in dist/assets/css/
-        assetFileNames: (assetInfo) => {
-          // Separate CSS into its own folder structure
-          if (assetInfo.name.endsWith('.css')) {
-            return 'assets/css/[name].[hash].[ext]';
-          }
-          // Handle other assets like fonts or images processed by rollup
-          return 'assets/[ext]/[name].[hash].[ext]';
-        },
+        assetFileNames: `assets/[ext]/[name].[hash].[ext]`,
       },
       plugins: [
-        // Obfuscator plugin - configured to ONLY target your JS
         javascriptObfuscator({
-          include: ["**/assets/js/**/*.js"], // IMPORTANT: Target only your JS files
-          exclude: ["node_modules/**"],     // Exclude dependencies
-
-          // Strong Obfuscation Options (Test Thoroughly!)
-          options: {
-            compact: true,
-            controlFlowFlattening: true,
-            controlFlowFlatteningThreshold: 0.9,
-            deadCodeInjection: true,
-            deadCodeInjectionThreshold: 0.6,
-            debugProtection: false,
-            debugProtectionInterval: 0,
-            disableConsoleOutput: true,
-            identifierNamesGenerator: 'hexadecimal',
-            log: false,
-            numbersToExpressions: true,
-            renameGlobals: false, // Safer
-            selfDefending: true,
-            simplify: true,
-            splitStrings: true,
-            splitStringsChunkLength: 15,
-            stringArray: true,
-            stringArrayCallsTransform: true,
-            stringArrayEncoding: ['base64'],
-            stringArrayIndexShift: true,
-            stringArrayRotate: true,
-            stringArrayShuffle: true,
-            stringArrayWrappersCount: 3,
-            stringArrayWrappersChainedCalls: true,
-            stringArrayWrappersParametersMaxCount: 5,
-            stringArrayWrappersType: 'function',
-            stringArrayThreshold: 0.9,
-            transformObjectKeys: true,
-            unicodeEscapeSequence: false,
-            target: 'browser',
-            sourceMap: false, // Ensure no sourcemap for obfuscated code
-          }
+          include: ["**/assets/js/**/*.js"],
+          exclude: ["node_modules/**"],
+          options: obfuscatorOptions
         })
       ]
     }
   },
+
+  css: {
+    preprocessorOptions: {}
+  },
+
   server: {
     open: true
   }
