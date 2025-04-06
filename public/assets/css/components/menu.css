@@ -1,0 +1,434 @@
+.menu {
+  position: fixed;
+  width: 250px;
+  height: 100vh;
+  background-color: var(--header-bg);
+  border-right: 1px solid var(--border);
+  box-shadow: 0 0 15px var(--shadow);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease;
+  transform: translateX(-100%);
+  overflow: hidden;
+}
+
+.menu.open {
+  transform: translateX(0);
+}
+
+.menu.collapsed {
+  width: 70px;
+  overflow: visible;
+}
+
+/* Hide elements when menu is collapsed except for menu-collapse button */
+.menu.collapsed .menu-title,
+.menu.collapsed .menu-item span,
+.menu.collapsed .menu-section-title,
+.menu.collapsed .theme-switcher span {
+  display: none;
+}
+
+.menu.collapsed .menu-badge {
+  display: none;
+}
+
+/* Modify header-content to better handle collapsed state */
+.menu.collapsed .header-content {
+  justify-content: center;
+}
+
+/* Hide logo when collapsed */
+.menu.collapsed .menu-brand {
+  display: none;
+}
+
+/* Make collapse button more prominent in collapsed state */
+.menu.collapsed .menu-collapse {
+  margin: 0;
+  transform: rotate(180deg);
+  display: flex;
+}
+
+.menu.collapsed .menu-item {
+  justify-content: center;
+  padding: 0.75rem;
+}
+
+.menu.collapsed .menu-item i {
+  margin-right: 0;
+}
+
+.menu.collapsed .theme-switcher {
+  justify-content: center;
+}
+
+.menu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 1rem;
+  height: 56px;
+  border-bottom: 1px solid var(--border);
+  background-color: var(--header-bg);
+  position: relative;
+    -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.menu-brand {
+  display: flex;
+  align-items: center;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.menu-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  margin-right: 10px;
+  display: block;
+  color: var(--primary);
+}
+
+.menu-title {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  margin: 0;
+  flex: 1;
+}
+
+.menu-collapse {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  width: 28px;
+  height: 28px;
+  font-size: 0.9rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.menu-collapse:hover {
+  background-color: var(--menu-hover);
+  color: var(--primary);
+}
+
+.menu-items {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.75rem 0;
+}
+
+.menu-section {
+  margin-bottom: 1.5rem;
+}
+
+.menu-section-title {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+  padding: 0 1rem;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  padding: 0.625rem 1rem;
+  color: var(--text);
+  text-decoration: none;
+  border-radius: 6px;
+  margin: 0.125rem 0.5rem;
+  transition: all 0.2s;
+  gap: 0.75rem;
+}
+
+.menu-item i {
+  width: 16px;
+  font-size: 1rem;
+  color: var(--text-secondary);
+}
+
+.menu-item:hover {
+  background-color: var(--menu-hover);
+  color: var(--primary);
+}
+
+.menu-item:hover i {
+  color: var(--primary);
+}
+
+.menu-item.active {
+  background-color: var(--menu-active);
+  color: var(--primary);
+}
+
+.menu-item.active i {
+  color: var(--primary);
+}
+
+.menu-badge {
+  margin-left: auto;
+  font-size: 0.7rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  background-color: var(--primary);
+  color: var(--text-primary);
+}
+
+.menu-badge.warning {
+  background-color: var(--warning);
+}
+
+.menu-badge.success {
+  background-color: var(--success);
+}
+
+.menu-footer {
+  padding: 1rem;
+  border-top: 1px solid var(--border);
+  margin-top: auto;
+}
+
+.theme-switcher {
+  background: none;
+  border: none;
+  color: var(--text);
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 6px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.theme-switcher:hover {
+  background-color: var(--menu-hover);
+}
+
+.theme-switcher i {
+  font-size: 1rem;
+  color: var(--text-secondary);
+}
+
+.theme-switcher span {
+  font-size: 0.875rem;
+}
+
+@media (min-width: 1025px) {
+  .menu:not(.maintenance-mode) {
+    transform: translateX(0);
+    box-shadow: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    transition: width 0.3s ease;
+  }
+
+  .main-content {
+    margin-left: 250px;
+    width: calc(100% - 250px);
+    transition: margin-left 0.3s ease, width 0.3s ease;
+  }
+
+  .menu.collapsed ~ .main-content {
+    margin-left: 70px;
+    width: calc(100% - 70px);
+  }
+
+  /* Remove auto-rotation - we control it manually in JS */
+  .menu.collapsed .menu-collapse {
+    transform: rotate(180deg);
+  }
+
+  .menu-toggle {
+    display: none;
+  }
+}
+
+@media (max-width: 1024px) {
+  .menu {
+    transform: translateX(-100%);
+    z-index: 1000;
+  }
+
+  .menu.open {
+    transform: translateX(0);
+  }
+
+  .main-content {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  /* Don't hide the collapse button on mobile */
+  .menu-collapse {
+    display: flex;
+  }
+
+  .menu-toggle {
+    display: flex;
+  }
+}
+
+
+.theme-dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.theme-dropdown-button {
+  background: none;
+  border: none;
+  color: var(--text);
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 6px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.theme-dropdown-button:hover {
+  background-color: var(--background);
+}
+
+.theme-dropdown-button i {
+  font-size: 1rem;
+  color: var(--text-secondary);
+}
+
+.theme-dropdown-button span {
+  font-size: 0.875rem;
+  flex: 1;
+  text-align: left;
+}
+
+.dropdown-arrow {
+  font-size: 0.75rem !important;
+  transition: transform 0.2s ease;
+}
+
+.theme-dropdown-menu {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  width: 100%;
+  background-color: var(--card-bg);
+  border-radius: 8px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.3s ease, opacity 0.2s ease, transform 0.2s ease;
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+  margin-bottom: 0.5rem;
+  border: 1px solid var(--border);
+}
+
+.theme-dropdown-menu.open {
+  max-height: 300px;
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.theme-option {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--text);
+  cursor: pointer;
+  gap: 0.75rem;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.theme-option i {
+  width: 16px;
+  font-size: 1rem;
+  color: var(--text-secondary);
+}
+
+.theme-option:hover {
+  background-color: var(--background);
+  color: var(--primary);
+}
+
+.theme-option:hover i {
+  color: var(--primary);
+}
+
+.theme-option.active {
+  background-color: var(--background);
+  color: var(--primary);
+}
+
+.theme-option.active i {
+  color: var(--primary);
+}
+
+/* Improved collapsed menu adjustments for theme dropdown */
+.menu.collapsed .theme-dropdown-button {
+  justify-content: center;
+  padding: 0.75rem;
+  position: relative;
+}
+
+.menu.collapsed .theme-dropdown-button span,
+.menu.collapsed .dropdown-arrow {
+  display: none;
+}
+
+/* Style for collapsed dropdown button with indicator */
+.menu.collapsed .theme-dropdown-button:hover::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background-color: var(--background);
+  border-top-right-radius: 4px;
+  border-bottom-right-radius: 4px;
+}
+
+/* Updated dropdown positioning for collapsed menu */
+.menu.collapsed .theme-dropdown-menu {
+  position: fixed;
+  border-radius: 8px;
+  z-index: 1000;
+  width: 180px;
+}
