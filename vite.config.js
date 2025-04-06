@@ -1,114 +1,78 @@
 import { defineConfig } from 'vite';
-import path from 'path';
-// Import the CommonJS module and get its default export
-import pkg from 'vite-plugin-obfuscator';
-const obfuscator = pkg.default;
+import javascriptObfuscator from 'rollup-plugin-javascript-obfuscator';
 
-// Basic options for testing stability - less likely to break JSON parsing
-const basicObfuscatorOptions = {
-  compact: true,
-  simplify: true,
-  // Explicitly disable features known to potentially interfere more heavily
-  controlFlowFlattening: false,
-  deadCodeInjection: false,
-  debugProtection: false,
-  disableConsoleOutput: false, // Keep console logs enabled for debugging!
-  identifierNamesGenerator: 'hexadecimal', // Simple name mangling
-  log: false,
-  numbersToExpressions: false,
-  renameGlobals: false, // Safer
-  renameProperties: false, // Safer
-  rotateStringArray: false,
-  selfDefending: false,
-  shuffleStringArray: false,
-  splitStrings: false,
-  stringArray: false, // Disable string array manipulation
-  // stringArrayEncoding: [], // Not needed
-  // stringArrayThreshold: 0, // Not needed
-  target: 'browser',
-  transformObjectKeys: false, // Safer
-  unicodeEscapeSequence: false
-};
+export default defineConfig({
+  root: '.',
+  publicDir: 'public', // Ensure assets/img is moved here -> public/assets/img
 
-/*
-const fullObfuscatorOptions = {
-  compact: true, controlFlowFlattening: true, controlFlowFlatteningThreshold: 0.75,
-  deadCodeInjection: true, deadCodeInjectionThreshold: 0.4, debugProtection: false,
-  debugProtectionInterval: 0, disableConsoleOutput: true, domainLock: [],
-  domainLockRedirectUrl: 'about:blank', forceTransformStrings: [], identifierNamesCache: null,
-  identifierNamesGenerator: 'hexadecimal', identifiersDictionary: [], identifiersPrefix: '',
-  ignoreImports: false, inputFileName: '', log: false, numbersToExpressions: false,
-  optionsPreset: 'default', renameGlobals: true, renameProperties: true,
-  renamePropertiesMode: 'safe', reservedNames: [], reservedStrings: [], seed: 0,
-  selfDefending: true, simplify: true, sourceMap: false, sourceMapBaseUrl: '',
-  sourceMapFileName: '', sourceMapMode: 'separate', sourceMapSourcesMode: 'sources-content',
-  splitStrings: true, splitStringsChunkLength: 10, stringArray: true,
-  stringArrayCallsTransform: true, stringArrayCallsTransformThreshold: 0.5,
-  stringArrayEncoding: ['base64'], stringArrayIndexesType: ['hexadecimal-number'],
-  stringArrayIndexShift: true, stringArrayRotate: true, stringArrayShuffle: true,
-  stringArrayWrappersCount: 2, stringArrayWrappersChainedCalls: true,
-  stringArrayWrappersParametersMaxCount: 2, stringArrayWrappersType: 'variable',
-  stringArrayThreshold: 0.75, target: 'browser', transformObjectKeys: true,
-  unicodeEscapeSequence: true
-};
-*/
+  build: {
+    outDir: 'dist',
+    sourcemap: false, // Disable sourcemaps for production/obfuscation
 
-export default defineConfig(({ command }) => {
-  const isBuild = command === 'build';
-  console.log(`Vite running in ${command} mode.`);
-  // Decide which options to use based on testing needs
-  const currentObfuscatorOptions = basicObfuscatorOptions; // START WITH BASIC
-  // const currentObfuscatorOptions = fullObfuscatorOptions; // Switch back later if basic works
-
-  if (isBuild) {
-    console.log(
-      `Applying ${currentObfuscatorOptions === basicObfuscatorOptions ? 'BASIC' : 'FULL'} Obfuscation via Vite plugin...`
-    );
-  }
-
-  return {
-    root: '.',
-    publicDir: 'public',
-    build: {
-      outDir: 'dist',
-      sourcemap: false, // Keep false
-      rollupOptions: {
-        input: { main: 'index.html' },
-        output: {
-          entryFileNames: `assets/js/[name].[hash].js`,
-          chunkFileNames: `assets/js/[name].[hash].js`,
-          assetFileNames: (assetInfo) => {
-            const extType = assetInfo.name?.split('.').pop() ?? '';
-            if (/\.(css)$/.test(assetInfo.name ?? '')) {
-              return `assets/css/[name].[hash][extname]`;
-            }
-            if (/\.(png|jpe?g|gif|svg|webp)$/.test(assetInfo.name ?? '')) {
-              return `assets/img/[name].[hash][extname]`;
-            }
-            if (/\.(woff|woff2|eot|ttf|otf)$/.test(assetInfo.name ?? '')) {
-              return `assets/fonts/[name].[hash][extname]`;
-            }
-            return `assets/[ext]/[name].[hash][extname]`;
+    rollupOptions: {
+      input: {
+        main: 'index.html'
+      },
+      output: {
+        // Hashed filenames for JS (entry and chunks)
+        entryFileNames: `assets/js/[name].[hash].js`,
+        chunkFileNames: `assets/js/[name].[hash].js`,
+        // Hashed filenames for other assets (like CSS)
+        // CSS will be output as separate files in dist/assets/css/
+        assetFileNames: (assetInfo) => {
+          // Separate CSS into its own folder structure
+          if (assetInfo.name.endsWith('.css')) {
+            return 'assets/css/[name].[hash].[ext]';
           }
-        }
-      }
-    },
-    plugins: [
-      isBuild
-        ? obfuscator({
-            options: currentObfuscatorOptions,
-            apply: 'build',
-            exclude: [
-              /node_modules/,
-              // Keep excluding LibraryLoader just in case
-              path.resolve(__dirname, 'assets/js/chunks/LibraryLoader.js')
-            ]
-          })
-        : null
-    ].filter(Boolean),
-    css: {},
-    server: {
-      open: true
+          // Handle other assets like fonts or images processed by rollup
+          return 'assets/[ext]/[name].[hash].[ext]';
+        },
+      },
+      plugins: [
+        // Obfuscator plugin - configured to ONLY target your JS
+        javascriptObfuscator({
+          include: ["**/assets/js/**/*.js"], // IMPORTANT: Target only your JS files
+          exclude: ["node_modules/**"],     // Exclude dependencies
+
+          // Strong Obfuscation Options (Test Thoroughly!)
+          options: {
+            compact: true,
+            controlFlowFlattening: true,
+            controlFlowFlatteningThreshold: 0.9,
+            deadCodeInjection: true,
+            deadCodeInjectionThreshold: 0.6,
+            debugProtection: false,
+            debugProtectionInterval: 0,
+            disableConsoleOutput: true,
+            identifierNamesGenerator: 'hexadecimal',
+            log: false,
+            numbersToExpressions: true,
+            renameGlobals: false, // Safer
+            selfDefending: true,
+            simplify: true,
+            splitStrings: true,
+            splitStringsChunkLength: 15,
+            stringArray: true,
+            stringArrayCallsTransform: true,
+            stringArrayEncoding: ['base64'],
+            stringArrayIndexShift: true,
+            stringArrayRotate: true,
+            stringArrayShuffle: true,
+            stringArrayWrappersCount: 3,
+            stringArrayWrappersChainedCalls: true,
+            stringArrayWrappersParametersMaxCount: 5,
+            stringArrayWrappersType: 'function',
+            stringArrayThreshold: 0.9,
+            transformObjectKeys: true,
+            unicodeEscapeSequence: false,
+            target: 'browser',
+            sourceMap: false, // Ensure no sourcemap for obfuscated code
+          }
+        })
+      ]
     }
-  };
+  },
+  server: {
+    open: true
+  }
 });
