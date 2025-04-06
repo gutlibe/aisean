@@ -5,15 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build:vite": "vite build",
-    "build": "npm run build:vite && npm run obfuscate-dist",
-    "obfuscate-dist": "javascript-obfuscator ./dist/assets/js --output ./dist/assets/js --config ./obfuscate.config.cjs",
+    "build": "vite build",
     "preview": "vite preview"
   },
   "devDependencies": {
     "vite": "^5.3.1",
     "javascript-obfuscator": "^4.1.1",
-    "rollup-plugin-javascript-obfuscator": "^1.0.4",
-    "lightningcss-cli": "^1.25.1"
+    "rollup-plugin-javascript-obfuscator": "^1.0.4"
   }
 }
