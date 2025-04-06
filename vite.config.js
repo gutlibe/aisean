@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
-import { obfuscator } from 'vite-plugin-obfuscator'; // Use named import
 import path from 'path';
+import pkg from 'vite-plugin-obfuscator'; // Import the CommonJS module as default
+const { obfuscator } = pkg; // Destructure the named export
 
 // Basic options for testing stability - less likely to break JSON parsing
 const basicObfuscatorOptions = {
@@ -107,5 +108,5 @@ export default defineConfig(({ command }) => {
     server: {
       open: true,
     },
-  }
+  };
 });
