@@ -1,15 +1,16 @@
+// vite.config.js
 import { defineConfig } from 'vite';
 import javascriptObfuscator from 'rollup-plugin-javascript-obfuscator';
 
 export default defineConfig({
   root: '.',
-  publicDir: 'public', // This is your top-level public dir, copied as-is
+  publicDir: 'public',
   build: {
     outDir: 'dist',
-    sourcemap: false, // Ensure sourcemaps are off for obfuscation effectiveness
+    sourcemap: false, // MUST be false for obfuscation
     cssCodeSplit: false,
     assetsInlineLimit: 0,
-    minify: false, // Let the obfuscator handle minification/compacting if needed
+    minify: false, // Obfuscator handles compacting
     modulePreload: {
       polyfill: false
     },
@@ -24,79 +25,75 @@ export default defineConfig({
           if (assetInfo.name.endsWith('.css')) {
             return 'assets/css/[name].[ext]'; // Keep original CSS names
           }
-          // Ensure other assets get hashes for cache busting
           return `assets/[ext]/[name].[hash].[ext]`;
         },
       },
       plugins: [
         javascriptObfuscator({
-          // Target all JS files within your source 'assets/js/' directory
           include: ["assets/js/**/*.js"],
-          exclude: ["node_modules/**"], // Keep excluding node_modules
+          exclude: ["node_modules/**"],
           options: {
-            // --- Stronger Obfuscation Settings ---
-
-            // Compacting & Simplification
+            // --- Aggressive Obfuscation Settings ---
             compact: true,
             simplify: true,
-
-            // Target Environment
             target: 'browser',
 
-            // Renaming (Crucial for making variables hard to understand)
-            identifierNamesGenerator: 'mangled', // Use short mangled names (a, b, c...)
-            renameGlobals: true, // Attempt to rename global variables and functions
-            // renameProperties: true, // !!! USE WITH CAUTION !!! Renames object properties. Can break code if properties are accessed dynamically (e.g., obj['propName']). Set to false if issues arise.
-            // renamePropertiesMode: 'safe', // Or 'unsafe' for more renaming, but higher risk
+            // Renaming & Identifiers (Key for variable obfuscation)
+            identifierNamesGenerator: 'mangled', // Short, hard-to-track names (a, b, c...)
+            renameGlobals: true, // !!! IMPORTANT: Rename globals. Test thoroughly! Needs reservedNames/Strings.
+            // renameProperties: true, // !!! USE WITH EXTREME CAUTION !!! Renames object properties. High risk of breaking code. Test extensively if enabled.
+            // renamePropertiesMode: 'safe', // Or 'unsafe'
 
-            // Control Flow Obfuscation
-            controlFlowFlattening: true, // Obscures program flow
-            controlFlowFlatteningThreshold: 1, // Apply flattening aggressively
+            // Control Flow
+            controlFlowFlattening: true,
+            controlFlowFlatteningThreshold: 1, // Apply maximally
 
-            // Code "Noise"
-            deadCodeInjection: true, // Adds unused code blocks
-            deadCodeInjectionThreshold: 1, // Inject dead code aggressively
+            // String Obfuscation (Max settings)
+            stringArray: true,
+            stringArrayThreshold: 1, // Affect all strings possible
+            splitStrings: true,
+            splitStringsChunkLength: 5, // Split into smaller chunks
+            stringArrayEncoding: ['rc4'], // Use RC4 encoding
+            stringArrayCallsTransform: true, // Transform calls to string array
+            stringArrayWrappersCount: 5, // More wrappers
+            stringArrayWrappersType: 'function', // Function wrappers
+            stringArrayWrappersChainedCalls: true,
+            stringArrayWrappersParametersMaxCount: 5,
+            stringArrayIndexShift: true,
+            stringArrayRotate: true,
+            stringArrayShuffle: true,
+            unicodeEscapeSequence: true, // Make strings harder to read directly
 
-            // String Obfuscation (Very Important)
-            stringArray: true, // Move strings to an array
-            stringArrayThreshold: 1, // Affect nearly all strings
-            stringArrayEncoding: ['rc4'], // Encode the string array (rc4 or base64)
-            stringArrayWrappersCount: 5, // Increase wrappers around string array access
-            stringArrayWrappersType: 'function', // Use functions for wrappers (slightly harder to analyze)
-            stringArrayWrappersChainedCalls: true, // Chain wrapper calls
-            stringArrayRotate: true, // Rotate the string array
-            stringArrayShuffle: true, // Shuffle the array initially
-            splitStrings: true, // Split strings into smaller parts
-            splitStringsChunkLength: 5, // Adjust chunk length as needed
-            unicodeEscapeSequence: true, // Convert strings to unicode escape sequences
-
-             // Prevent critical strings (like CSS paths) from being obfuscated
+            // Make sure critical strings are NOT obfuscated/renamed
             reservedStrings: [
               '\\.css$', // Regex for anything ending in .css
               '\\/assets\\/css\\/', // Regex for the CSS asset path
-              'page-content', // DOM IDs might be needed
-              'page-header',
+              'page-content', // Example DOM ID
+              'page-header',  // Example DOM class
               'menu-toggle',
               'back-arrow',
-              // Add any other strings that MUST NOT be changed (e.g., DOM IDs used in querySelector)
+              'click', // Example event name string
+              // Add ALL strings used in querySelector, getElementById, classList.add/remove, setAttribute, etc.
+              // Add any property names accessed via strings obj['propertyName'] if renameProperties is true.
             ],
+            // If renameGlobals is true, you might need reservedNames for specific global functions/variables
+            // reservedNames: ['myGlobalFunction', 'myGlobalVar'],
 
-            // Other Obfuscation Techniques
-            numbersToExpressions: true, // Converts numbers like 123 to complex expressions
-            transformObjectKeys: true, // Renames keys in object literals
+            // Anti-Debugging / Tampering
+            selfDefending: true, // Code resists modification
+            debugProtection: true, // Add anti-debugging measures
+            debugProtectionInterval: 4000, // Re-insert anti-debugging periodically
+            disableConsoleOutput: true, // Remove console logs
 
-            // Anti-Tampering / Anti-Debugging
-            selfDefending: true, // Makes the code resist modifications
-            debugProtection: true, // Adds anti-debugging measures
-            debugProtectionInterval: 4000, // Re-inserts anti-debugging code periodically (ms)
-            disableConsoleOutput: true, // Disables console.log, console.warn etc.
+            // Other Obfuscation
+            numbersToExpressions: true,
+            transformObjectKeys: true,
 
-            // Build Options
-            log: false, // Don't log obfuscation details during build
-            sourceMap: false, // Keep disabled
-            seed: 0, // Use a fixed seed for consistent builds (or remove for random seed each time)
-
-            // --- End of Stronger Obfuscation Settings ---
+            // Build Settings
+            log: false,
+            sourceMap: false,
+            seed: 0, // Use 0 for consistent builds, or remove for random builds
+            // --- End of Aggressive Settings ---
           }
         })
       ]
