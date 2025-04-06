@@ -1,7 +1,8 @@
 import { defineConfig } from 'vite';
 import path from 'path';
-import pkg from 'vite-plugin-obfuscator'; // Import the CommonJS module as default
-const { obfuscator } = pkg; // Destructure the named export
+// Import the CommonJS module and get its default export
+import pkg from 'vite-plugin-obfuscator';
+const obfuscator = pkg.default;
 
 // Basic options for testing stability - less likely to break JSON parsing
 const basicObfuscatorOptions = {
@@ -29,7 +30,6 @@ const basicObfuscatorOptions = {
   unicodeEscapeSequence: false
 };
 
-// Your desired full obfuscation options (keep for later)
 /*
 const fullObfuscatorOptions = {
   compact: true, controlFlowFlattening: true, controlFlowFlatteningThreshold: 0.75,
@@ -61,7 +61,9 @@ export default defineConfig(({ command }) => {
   // const currentObfuscatorOptions = fullObfuscatorOptions; // Switch back later if basic works
 
   if (isBuild) {
-    console.log(`Applying ${currentObfuscatorOptions === basicObfuscatorOptions ? 'BASIC' : 'FULL'} Obfuscation via Vite plugin...`);
+    console.log(
+      `Applying ${currentObfuscatorOptions === basicObfuscatorOptions ? 'BASIC' : 'FULL'} Obfuscation via Vite plugin...`
+    );
   }
 
   return {
@@ -87,9 +89,9 @@ export default defineConfig(({ command }) => {
               return `assets/fonts/[name].[hash][extname]`;
             }
             return `assets/[ext]/[name].[hash][extname]`;
-          },
-        },
-      },
+          }
+        }
+      }
     },
     plugins: [
       isBuild
@@ -99,14 +101,14 @@ export default defineConfig(({ command }) => {
             exclude: [
               /node_modules/,
               // Keep excluding LibraryLoader just in case
-              path.resolve(__dirname, 'assets/js/chunks/LibraryLoader.js'),
-            ],
+              path.resolve(__dirname, 'assets/js/chunks/LibraryLoader.js')
+            ]
           })
-        : null,
+        : null
     ].filter(Boolean),
     css: {},
     server: {
-      open: true,
-    },
+      open: true
+    }
   };
 });
