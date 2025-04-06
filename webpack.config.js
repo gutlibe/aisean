@@ -7,6 +7,7 @@ import WebpackObfuscator from 'webpack-obfuscator';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Obfuscation options (ensure this is complete from your original)
 const obfuscatorOptions = {
   compact: true,
   controlFlowFlattening: true,
@@ -64,84 +65,93 @@ const obfuscatorOptions = {
 export default (env, argv) => {
   const isProduction = argv.mode === 'production';
 
-  console.log(`Running in ${isProduction ? 'production' : 'development'} mode`);
+  console.log(`Running Webpack in ${isProduction ? 'production' : 'development'} mode`);
   if (isProduction) {
-      console.log("Applying Obfuscation...");
+      console.log("Applying JavaScript Obfuscation...");
   }
 
   return {
     mode: isProduction ? 'production' : 'development',
-    entry: './assets/js/app.js',
+    entry: './assets/js/app.js', // Your main JS entry point
     output: {
       path: path.resolve(__dirname, 'dist'),
-      filename: 'assets/js/[name].[contenthash].js',
-      chunkFilename: 'assets/js/[name].[contenthash].js',
-      assetModuleFilename: 'assets/[name].[contenthash][ext]',
-      clean: true,
+      filename: 'assets/js/[name].[contenthash].js', // Hashed JS bundles
+      chunkFilename: 'assets/js/[name].[contenthash].js', // Hashed JS chunks
+      assetModuleFilename: 'assets/[path][name].[contenthash][ext]', // Keep original asset paths
+      clean: true, // Clean dist before build
     },
     devtool: isProduction ? false : 'eval-source-map',
     devServer: {
-      static: './dist',
+      static: './dist', // Serve from dist
       open: true,
       hot: true,
-      historyApiFallback: true,
+      historyApiFallback: true, // For client-side routing
       port: 8080,
-      watchFiles: ['public/**/*', 'assets/**/*'], // Watch all assets
+      watchFiles: ['public/**/*', 'assets/**/*'], // Watch source assets & public
     },
     module: {
       rules: [
-        // No CSS rules - CSS will be copied as-is
-        { // Rule to handle assets referenced in JS/HTML if any
+        // We only need rules for assets Webpack might encounter during JS bundling
+        // or if you import assets directly in JS.
+        {
           test: /\.(png|svg|jpg|jpeg|gif|woff|woff2|eot|ttf|otf)$/i,
-          type: 'asset/resource',
+          type: 'asset/resource', // Copies the asset and provides the URL
            generator: {
-               // Keep original structure within assets folder
-               filename: 'assets/[path][name][ext]'
+                // Place assets in their respective folders within dist/assets
+               filename: (pathData) => {
+                   const relativePath = path.relative(path.resolve(__dirname, 'assets'), pathData.filename);
+                   return `assets/${relativePath}`;
+               },
            }
         },
+        // Add JS loaders (like Babel) here if needed for compatibility
       ],
     },
     plugins: [
       new HtmlWebpackPlugin({
-        template: './index.html',
-        inject: 'body',
+        template: './index.html', // Your HTML template
+        inject: 'body', // Inject JS bundle into body
       }),
       new CopyWebpackPlugin({
         patterns: [
           {
-            from: 'public', // Copies content of public/ to dist/
+            from: 'public', // Copy everything from public to dist root
             to: '.',
             globOptions: {
-              ignore: ['**/index.html'], // Handled by HtmlWebpackPlugin
+              ignore: ['**/index.html'], // Ignore index.html (HtmlWebpackPlugin handles it)
             },
+            noErrorOnMissing: true, // Don't fail if public dir is missing/empty
           },
           {
-            from: 'assets',    // Copy the *entire* assets directory
+            from: 'assets',    // Copy the entire assets directory
             to: 'assets',      // To dist/assets
             globOptions: {
-              // Ignore JS files because Webpack bundles them
+              // CRITICAL: Ignore the JS directory, as Webpack handles JS bundling
               ignore: ['**/js/**'],
             },
-            noErrorOnMissing: true // Don't error if assets dir is empty initially
+            noErrorOnMissing: true
           },
         ],
       }),
-      // Obfuscator plugin (production only)
-      isProduction && new WebpackObfuscator(obfuscatorOptions, []),
-    ].filter(Boolean),
+      // Conditionally add Obfuscator plugin for production builds
+      isProduction && new WebpackObfuscator(obfuscatorOptions, [
+          // Optional: Exclude specific files/chunks if obfuscation breaks them
+          // 'vendors.js' // Example if you had vendor chunking
+      ]),
+    ].filter(Boolean), // Removes falsy entries (like the obfuscator in dev)
     optimization: {
-      minimize: isProduction, // Only minimize JS (Terser is default)
+      minimize: isProduction, // Enable JS minification in production (Terser is default)
       minimizer: [
-        `...`, // Keep default JS minimizer
-        // No CssMinimizerPlugin needed
+        `...`, // Use Webpack's default minimizers (TerserPlugin for JS)
+        // No CSS minimizer needed here
       ],
     },
     resolve: {
-      extensions: ['.js', '.json'],
+      extensions: ['.js', '.json'], // Allow importing .js files without the extension
     },
     performance: {
        hints: isProduction ? 'warning' : false,
-       maxEntrypointSize: isProduction ? 1024000 : 512000,
+       maxEntrypointSize: isProduction ? 1024000 : 512000, // Adjust as needed
        maxAssetSize: isProduction ? 1024000 : 512000,
     },
   };
