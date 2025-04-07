@@ -5,8 +5,7 @@ export default defineConfig({
   plugins: [
     obfuscator({
       optionsPreset: 'medium-obfuscation',
-      sourceMap: false,
-      exclude: ['node_modules/**'] // Default, can be omitted
+      sourceMap: false
     })
   ],
   root: '.',
@@ -18,18 +17,26 @@ export default defineConfig({
     assetsInlineLimit: 0,
     rollupOptions: {
       input: {
-        main: 'index.html'
+        main: 'index.html',
+        // login: 'login/index.html'
       },
       output: {
         entryFileNames: `assets/js/[name].[hash].js`,
         chunkFileNames: `assets/js/[name].[hash].js`,
         assetFileNames: `assets/[ext]/[name].[hash].[ext]`,
       },
-      plugins: [] // No plugins needed here, as obfuscator is in top-level
+      plugins: []
     }
   },
   css: {
-    preprocessorOptions: {}
+    preprocessorOptions: {},
+    // postcss: {
+    //   plugins: [
+    //     require('cssnano')({ // You might need to npm install --save-dev cssnano
+    //       preset: 'default',
+    //     }),
+    //   ],
+    // },
   },
   server: {
     open: true
