@@ -11,19 +11,22 @@ const obfuscatorOptions = {
   identifierNamesGenerator: 'hexadecimal',
   renameGlobals: true,
   renameProperties: true,
-  renamePropertiesMode: 'safe',
+  renamePropertiesMode: 'unsafe',  // Changed to unsafe for better obfuscation
   selfDefending: true,
   simplify: true,
   splitStrings: true,
-  splitStringsChunkLength: 3,
+  splitStringsChunkLength: 3,      // More aggressive string splitting
   stringArray: true,
   stringArrayCallsTransform: true,
-  stringArrayCallsTransformThreshold: 0.5,
-  stringArrayEncoding: ['base64'],
-  stringArrayThreshold: 0.75,
-  transformObjectKeys: true,
+  stringArrayCallsTransformThreshold: 0.8,
+  stringArrayEncoding: ['rc4'],    // Stronger encoding for strings
+  stringArrayIndexesType: ['hexadecimal-number'],
+  stringArrayRotate: true,
+  stringArrayShuffle: true,
+  stringArrayThreshold: 0.5,       // Lower threshold to include more strings
+  transformTemplateLiterals: true, // Critical for HTML template obfuscation
   unicodeEscapeSequence: true,
-  transformTemplateLiterals: true
+  reservedStrings: []              // Empty to ensure all strings are processed
 };
 
 export default defineConfig({
