@@ -2,31 +2,51 @@ import { defineConfig } from 'vite';
 import javascriptObfuscator from 'rollup-plugin-javascript-obfuscator';
 
 const obfuscatorOptions = {
+  // Core obfuscation settings
   compact: true,
   controlFlowFlattening: true,
-  controlFlowFlatteningThreshold: 0.75,
+  controlFlowFlatteningThreshold: 1,  // Maximum obfuscation
   deadCodeInjection: true,
-  deadCodeInjectionThreshold: 0.4,
-  disableConsoleOutput: true,
-  identifierNamesGenerator: 'hexadecimal',
-  renameGlobals: true,
-  renameProperties: true,
-  renamePropertiesMode: 'safe',  // Change to unsafe for better obfuscation
-  selfDefending: true,
-  simplify: true,
-  splitStrings: true,
-  splitStringsChunkLength: 3,      // More aggressive string splitting
+  deadCodeInjectionThreshold: 0.5,
+  
+  // String and template literal protection
   stringArray: true,
   stringArrayCallsTransform: true,
-  stringArrayCallsTransformThreshold: 0.8,
-  stringArrayEncoding: ['rc4'],    // Stronger encoding for strings
+  stringArrayCallsTransformThreshold: 1,
+  stringArrayEncoding: ['rc4'],
+  stringArrayIndexShift: true,
   stringArrayIndexesType: ['hexadecimal-number'],
   stringArrayRotate: true,
   stringArrayShuffle: true,
-  stringArrayThreshold: 0.5,       // Lower threshold to include more strings
-  transformTemplateLiterals: true, // Critical for HTML template obfuscation
+  stringArrayWrappersCount: 5,
+  stringArrayWrappersType: 'function',
+  stringArrayThreshold: 1,  // Process ALL strings
+  transformObjectKeys: true,
   unicodeEscapeSequence: true,
-  reservedStrings: []              // Empty to ensure all strings are processed
+  
+  // Template literals specific enhancement
+  transformTemplateLiterals: true,  // Enable template literal transformation
+  splitStrings: true,
+  splitStringsChunkLength: 3,
+  
+  // Identifier protection
+  identifierNamesGenerator: 'hexadecimal',
+  identifiersPrefix: '_',  // Adds prefix to all variables
+  renameGlobals: true,
+  renameProperties: true,
+  renamePropertiesMode: 'unsafe',  // For maximum obfuscation
+  
+  // Self-protection mechanisms
+  selfDefending: true,
+  simplify: true,
+  target: 'browser',
+  
+  // Force processing of all strings without exceptions
+  reservedStrings: [],
+  reservedNames: [],
+  
+  // Console output removal
+  disableConsoleOutput: true
 };
 
 export default defineConfig({
@@ -37,16 +57,30 @@ export default defineConfig({
     sourcemap: false,
     cssCodeSplit: false,
     assetsInlineLimit: 0,
+    minify: 'terser',  // Use terser for pre-obfuscation minification
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true
+      }
+    },
     rollupOptions: {
       input: { main: 'index.html' },
       output: {
         entryFileNames: `assets/js/[name].[hash].js`,
         chunkFileNames: `assets/js/[name].[hash].js`,
-        assetFileNames: `assets/[ext]/[name].[hash].[ext]`
+        assetFileNames: `assets/[ext]/[name].[hash].[ext]`,
+        // Ensure minimal code transformations before obfuscation
+        format: 'es',
+        generatedCode: {
+          preset: 'es2015',
+          symbols: false
+        }
       },
       plugins: [
+        // Apply obfuscator as the final step
         javascriptObfuscator({
-          include: ["assets/js/**/*.js"],
+          include: ["**/assets/js/**/*.js"],  // More inclusive pattern
           exclude: ["node_modules/**"],
           options: obfuscatorOptions
         })
