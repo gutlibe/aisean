@@ -1,5 +1,5 @@
 import { defineConfig } from 'vite';
-import { obfuscator } from 'rollup-plugin-obfuscator'; // Changed import
+import obfuscator from 'rollup-plugin-obfuscator'; // Corrected: Use default import
 
 const obfuscatorOptions = {
   compact: true,
@@ -58,11 +58,8 @@ export default defineConfig({
         assetFileNames: `assets/[ext]/[name].[hash].[ext]`
       },
       plugins: [
-        obfuscator({ // Use the new plugin
-          options: obfuscatorOptions,
-          // Default include/exclude of rollup-plugin-obfuscator usually work well
-          // include: ['**/*.js'], // Example if defaults don't work
-          // exclude: ['node_modules/**'] // Example if defaults don't work
+        obfuscator({ // Use the default import variable name
+          options: obfuscatorOptions
         })
       ]
     }
