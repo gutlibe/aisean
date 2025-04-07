@@ -1,79 +1,75 @@
 import { defineConfig } from 'vite';
-import javascriptObfuscator from 'rollup-plugin-javascript-obfuscator';
+import obfuscator from 'rollup-plugin-obfuscator'; // Default import for the modern plugin
 
+// Aggressive options (similar to the ones that worked for obfuscation before)
 const obfuscatorOptions = {
   compact: true,
   controlFlowFlattening: true,
-  controlFlowFlatteningThreshold: 0.75, // Your previous value
+  controlFlowFlatteningThreshold: 1.0,
   deadCodeInjection: true,
-  deadCodeInjectionThreshold: 0.4, // Your previous value
-  debugProtection: false,
-  debugProtectionInterval: 0,
+  deadCodeInjectionThreshold: 1.0,
+  debugProtection: true,
+  debugProtectionInterval: 4000,
   disableConsoleOutput: true,
   identifierNamesGenerator: 'hexadecimal',
   log: false,
-  numbersToExpressions: true, // Consider enabling for more obfuscation
+  numbersToExpressions: true,
   renameGlobals: true,
   renameProperties: true,
-  renamePropertiesMode: 'safe', // Keep 'safe' unless testing 'unsafe' carefully
+  renamePropertiesMode: 'unsafe', // Use with caution, test thoroughly! Revert to 'safe' if breaks occur.
+  rotateStringArray: true,
   selfDefending: true,
+  shuffleStringArray: true,
   simplify: true,
   splitStrings: true,
-  splitStringsChunkLength: 10, // Your previous value
+  splitStringsChunkLength: 5, // Smaller chunks for more splitting
   stringArray: true,
   stringArrayCallsTransform: true,
-  stringArrayCallsTransformThreshold: 0.75, // Adjusted from your prev 0.5
-  stringArrayEncoding: ['rc4'], // Changed from base64 for potentially better obfuscation
+  stringArrayCallsTransformThreshold: 1.0,
+  stringArrayEncoding: ['rc4', 'base64'], // Multiple encodings
   stringArrayIndexesType: ['hexadecimal-number'],
   stringArrayIndexShift: true,
   stringArrayRotate: true,
   stringArrayShuffle: true,
-  stringArrayWrappersCount: 2, // Your previous value
+  stringArrayWrappersCount: 5,
   stringArrayWrappersChainedCalls: true,
-  stringArrayWrappersParametersMaxCount: 4, // Adjusted from your prev 2
-  stringArrayWrappersType: 'function', // Changed from 'variable' for more obfuscation
-  stringArrayThreshold: 0.8, // Adjusted from your prev 0.75
+  stringArrayWrappersParametersMaxCount: 5,
+  stringArrayWrappersType: 'function',
+  stringArrayThreshold: 1.0, // Process all eligible strings
   target: 'browser',
   transformObjectKeys: true,
-  transformTemplateLiterals: true, // <<< --- ENSURE THIS IS TRUE --- <<<
+  transformTemplateLiterals: true, // <<< Crucial for HTML
   unicodeEscapeSequence: true,
-  reservedNames: [], // Ensure empty unless needed
-  reservedStrings: [] // Ensure empty unless needed
+  reservedStrings: [] // Don't reserve strings unless absolutely necessary
 };
-
 
 export default defineConfig({
   root: '.',
   publicDir: 'public',
-
   build: {
     outDir: 'dist',
     sourcemap: false,
     cssCodeSplit: false,
-    assetsInlineLimit: 0,
-
+    assetsInlineLimit: 0, // Ensure assets aren't inlined if not desired
     rollupOptions: {
-      input: {
-        main: 'index.html'
-      },
+      input: { main: 'index.html' },
       output: {
+        // <<< THIS SECTION DEFINES THE OUTPUT STRUCTURE >>>
         entryFileNames: `assets/js/[name].[hash].js`,
         chunkFileNames: `assets/js/[name].[hash].js`,
-        assetFileNames: `assets/[ext]/[name].[hash].[ext]`,
+        assetFileNames: `assets/[ext]/[name].[hash].[ext]`
       },
       plugins: [
-        javascriptObfuscator({
-          // REMOVED include/exclude: Let the plugin use defaults
-          options: obfuscatorOptions
+        obfuscator({ // Use the modern plugin instance
+          options: obfuscatorOptions,
+          // No include/exclude needed usually, defaults should work.
+          // Add them only if absolutely necessary:
+          // include: ['**/*.js'],
+          // exclude: ['node_modules/**']
         })
       ]
     }
   },
-
-  css: {
-    preprocessorOptions: {}
-  },
-
   server: {
     open: true
   }
