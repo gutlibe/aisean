@@ -22,7 +22,8 @@ const obfuscatorOptions = {
   stringArrayEncoding: ['base64'],
   stringArrayThreshold: 0.75,
   transformObjectKeys: true,
-  unicodeEscapeSequence: true
+  unicodeEscapeSequence: true,
+  transformTemplateLiterals: true
 };
 
 export default defineConfig({
@@ -38,13 +39,11 @@ export default defineConfig({
       output: {
         entryFileNames: `assets/js/[name].[hash].js`,
         chunkFileNames: `assets/js/[name].[hash].js`,
-        assetFileNames: `assets/[ext]/[name].[hash].[ext]`,
-        preserveModules: true,
-        preserveEntrySignatures: 'allow-extension' // Critical fix
+        assetFileNames: `assets/[ext]/[name].[hash].[ext]`
       },
       plugins: [
         javascriptObfuscator({
-          include: ["assets/js/**/*.js"], // Match your actual source path
+          include: ["assets/js/**/*.js"],
           exclude: ["node_modules/**"],
           options: obfuscatorOptions
         })
