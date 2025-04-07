@@ -6,14 +6,14 @@
   "scripts": {
     "dev": "vite",
     "build:vite": "vite build",
-    "minify-css": "lightningcss --minify --bundle --targets '>= 0.25%' public/assets/css/**/*.css -d dist/assets/css",
-    "build": "npm run build:vite && npm run minify-css",
+    "obfuscate:js": "node scripts/obfuscate-build.js",
+    "minify:css": "lightningcss --minify --bundle --targets '>= 0.25%' public/assets/css/**/*.css -d dist/assets/css",
+    "build": "npm run build:vite && npm run obfuscate:js && npm run minify:css",
     "preview": "vite preview"
   },
   "devDependencies": {
     "vite": "^5.3.1",
     "javascript-obfuscator": "^4.1.1",
-    "rollup-obfuscator": "^4.1.1",
     "lightningcss-cli": "^1.25.1"
   }
 }
