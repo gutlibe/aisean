@@ -1,6 +1,9 @@
+// vite.config.js
 import { defineConfig } from 'vite';
-import javascriptObfuscator from 'rollup-plugin-javascript-obfuscator';
+// Import the Vite-specific plugin
+import { javascriptObfuscator } from 'vite-plugin-javascript-obfuscator';
 
+// Keep the same aggressive options
 const obfuscatorOptions = {
     compact: true,
     controlFlowFlattening: true,
@@ -11,11 +14,11 @@ const obfuscatorOptions = {
     debugProtectionInterval: 4000,
     disableConsoleOutput: true,
     identifierNamesGenerator: 'hexadecimal',
-    log: false,
+    log: false, // Set to true temporarily if you need verbose logs from the obfuscator itself
     numbersToExpressions: true,
     renameGlobals: true,
     renameProperties: true,
-    renamePropertiesMode: 'unsafe', // Most aggressive, TEST THOROUGHLY! Revert to 'safe' if build breaks.
+    renamePropertiesMode: 'unsafe', // Still the most aggressive - TEST CAREFULLY!
     rotateStringArray: true,
     selfDefending: true,
     shuffleStringArray: true,
@@ -33,13 +36,26 @@ const obfuscatorOptions = {
     stringArrayThreshold: 1,
     target: 'browser',
     transformObjectKeys: true,
-    transformTemplateLiterals: true, // Essential for HTML templates
+    transformTemplateLiterals: true, // Still crucial
     unicodeEscapeSequence: true,
 };
 
 export default defineConfig({
     root: '.',
     publicDir: 'public',
+    // Add the plugin to the main plugins array
+    plugins: [
+        // Add other Vite plugins here if you have any (e.g., vue(), react())
+        javascriptObfuscator({
+            options: obfuscatorOptions,
+            // Apply only during the 'build' command
+            apply: 'build',
+            // Optional: You might experiment with 'include' and 'exclude' here too,
+            // but the default often works better with Vite plugins.
+            // include: ["**/*.js"], // Example: If needed, adjust pattern
+            // exclude: [/node_modules/],
+        })
+    ],
     build: {
         outDir: 'dist',
         sourcemap: false,
@@ -52,14 +68,8 @@ export default defineConfig({
                 chunkFileNames: `assets/js/[name].[hash].js`,
                 assetFileNames: `assets/[ext]/[name].[hash].[ext]`
             },
-            plugins: [
-                javascriptObfuscator({
-                    include: [/\.[cm]?js$/], // Target JS files during build
-                    exclude: [/node_modules/],
-                    options: obfuscatorOptions,
-                    enforce: 'post', // Run after other plugins
-                })
-            ]
+            // Remove the obfuscator from rollupOptions.plugins
+            plugins: []
         }
     },
     server: {
