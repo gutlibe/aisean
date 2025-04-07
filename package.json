@@ -10,6 +10,7 @@
   },
   "devDependencies": {
     "vite": "^5.3.1",
-    "javascript-obfuscator": "^4.1.1"
+    "javascript-obfuscator": "^4.1.1",
+    "rollup-plugin-javascript-obfuscator": "^1.0.4"
   }
 }
