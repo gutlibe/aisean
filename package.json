@@ -9,8 +9,8 @@
     "preview": "vite preview"
   },
   "devDependencies": {
-    "vite": "^5.3.1",
-    "javascript-obfuscator": "^4.1.1",
-    "rollup-plugin-javascript-obfuscator": "^1.0.4"
+    "vite": "^6.2.5",                 // Use latest Vite
+    "javascript-obfuscator": "^4.1.1", // Core obfuscator
+    "rollup-plugin-obfuscator": "^1.1.0"  // Use the modern plugin
   }
 }
