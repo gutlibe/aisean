@@ -12,10 +12,10 @@ const obfuscatorOptions = {
   disableConsoleOutput: true,
   domainLock: [],
   domainLockRedirectUrl: 'about:blank',
-  forceTransformStrings: [ // Added this option
-    /notfound-container/,
-    /notfound-illustration/,
-    /Oops! Lost in Space/
+  forceTransformStrings: [ // Using strings for patterns now
+    "notfound-container",
+    "notfound-illustration",
+    "Oops! Lost in Space"
   ],
   identifierNamesCache: null,
   identifierNamesGenerator: 'hexadecimal',
@@ -53,13 +53,14 @@ const obfuscatorOptions = {
   stringArrayWrappersChainedCalls: true,
   stringArrayWrappersParametersMaxCount: 2,
   stringArrayWrappersType: 'variable',
-  stringArrayThreshold: 0.1, // Keep the low threshold for now
+  stringArrayThreshold: 0.1,
   target: 'browser',
   transformObjectKeys: true,
   unicodeEscapeSequence: true
 };
 
-console.log("Final Obfuscation Options:", JSON.stringify(obfuscatorOptions, null, 2));
+// Log the options *before* passing to defineConfig to ensure they look right
+console.log("Obfuscator Options Object:", obfuscatorOptions);
 
 export default defineConfig({
   root: '.',
@@ -84,7 +85,7 @@ export default defineConfig({
         javascriptObfuscator({
           include: ["**/assets/js/**/*.js"],
           exclude: ["node_modules/**"],
-          options: obfuscatorOptions
+          options: obfuscatorOptions // Pass the options object
         })
       ]
     }
