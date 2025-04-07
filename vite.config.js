@@ -1,5 +1,5 @@
 import { defineConfig } from 'vite';
-import javascriptObfuscator from 'rollup-plugin-javascript-obfuscator';
+import { obfuscate } from 'javascript-obfuscator';
 
 const obfuscatorOptions = {
   compact: true,
@@ -7,26 +7,18 @@ const obfuscatorOptions = {
   controlFlowFlatteningThreshold: 0.75,
   deadCodeInjection: true,
   deadCodeInjectionThreshold: 0.4,
-  disableConsoleOutput: true,
   identifierNamesGenerator: 'hexadecimal',
   renameGlobals: true,
   renameProperties: true,
-  renamePropertiesMode: 'unsafe',  // Changed to unsafe for better obfuscation
+  renamePropertiesMode: 'unsafe',
   selfDefending: true,
-  simplify: true,
   splitStrings: true,
-  splitStringsChunkLength: 3,      // More aggressive string splitting
+  splitStringsChunkLength: 3,
   stringArray: true,
-  stringArrayCallsTransform: true,
-  stringArrayCallsTransformThreshold: 0.8,
-  stringArrayEncoding: ['rc4'],    // Stronger encoding for strings
-  stringArrayIndexesType: ['hexadecimal-number'],
-  stringArrayRotate: true,
-  stringArrayShuffle: true,
-  stringArrayThreshold: 0.5,       // Lower threshold to include more strings
-  transformTemplateLiterals: true, // Critical for HTML template obfuscation
-  unicodeEscapeSequence: true,
-  reservedStrings: []              // Empty to ensure all strings are processed
+  stringArrayEncoding: ['rc4'],
+  stringArrayThreshold: 0.5,
+  transformTemplateLiterals: true,
+  unicodeEscapeSequence: true
 };
 
 export default defineConfig({
@@ -35,23 +27,22 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
-    cssCodeSplit: false,
-    assetsInlineLimit: 0,
+    minify: false, // Important: Disable default minification
     rollupOptions: {
       input: { main: 'index.html' },
       output: {
         entryFileNames: `assets/js/[name].[hash].js`,
         chunkFileNames: `assets/js/[name].[hash].js`,
-        assetFileNames: `assets/[ext]/[name].[hash].[ext]`
+        assetFileNames: `assets/[ext]/[name].[hash].[ext]`,
+        manualChunks: undefined // Let Rollup decide chunking
       },
-      plugins: [
-        javascriptObfuscator({
-          include: ["assets/js/**/*.js"],
-          exclude: ["node_modules/**"],
-          options: obfuscatorOptions
-        })
-      ]
+      plugins: [{
+        name: 'custom-obfuscation',
+        renderChunk(code) {
+          const result = obfuscate(code, obfuscatorOptions);
+          return result.getObfuscatedCode();
+        }
+      }]
     }
-  },
-  server: { open: true }
+  }
 });
