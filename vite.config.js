@@ -1,5 +1,5 @@
 import { defineConfig } from 'vite';
-import { obfuscate } from 'javascript-obfuscator';
+import javascriptObfuscator from 'rollup-plugin-javascript-obfuscator';
 
 const obfuscatorOptions = {
   compact: true,
@@ -7,18 +7,26 @@ const obfuscatorOptions = {
   controlFlowFlatteningThreshold: 0.75,
   deadCodeInjection: true,
   deadCodeInjectionThreshold: 0.4,
+  disableConsoleOutput: true,
   identifierNamesGenerator: 'hexadecimal',
   renameGlobals: true,
   renameProperties: true,
-  renamePropertiesMode: 'unsafe',
+  renamePropertiesMode: 'unsafe',  // Changed to unsafe for better obfuscation
   selfDefending: true,
+  simplify: true,
   splitStrings: true,
-  splitStringsChunkLength: 3,
+  splitStringsChunkLength: 3,      // More aggressive string splitting
   stringArray: true,
-  stringArrayEncoding: ['rc4'],
-  stringArrayThreshold: 0.5,
-  transformTemplateLiterals: true,
-  unicodeEscapeSequence: true
+  stringArrayCallsTransform: true,
+  stringArrayCallsTransformThreshold: 0.8,
+  stringArrayEncoding: ['rc4'],    // Stronger encoding for strings
+  stringArrayIndexesType: ['hexadecimal-number'],
+  stringArrayRotate: true,
+  stringArrayShuffle: true,
+  stringArrayThreshold: 0.5,       // Lower threshold to include more strings
+  transformTemplateLiterals: true, // Critical for HTML template obfuscation
+  unicodeEscapeSequence: true,
+  reservedStrings: []              // Empty to ensure all strings are processed
 };
 
 export default defineConfig({
@@ -27,22 +35,23 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
-    minify: false, // Important: Disable default minification
+    cssCodeSplit: false,
+    assetsInlineLimit: 0,
     rollupOptions: {
       input: { main: 'index.html' },
       output: {
         entryFileNames: `assets/js/[name].[hash].js`,
         chunkFileNames: `assets/js/[name].[hash].js`,
-        assetFileNames: `assets/[ext]/[name].[hash].[ext]`,
-        manualChunks: undefined // Let Rollup decide chunking
+        assetFileNames: `assets/[ext]/[name].[hash].[ext]`
       },
-      plugins: [{
-        name: 'custom-obfuscation',
-        renderChunk(code) {
-          const result = obfuscate(code, obfuscatorOptions);
-          return result.getObfuscatedCode();
-        }
-      }]
+      plugins: [
+        javascriptObfuscator({
+          include: ["assets/js/**/*.js"],
+          exclude: ["node_modules/**"],
+          options: obfuscatorOptions
+        })
+      ]
     }
-  }
+  },
+  server: { open: true }
 });
