@@ -11,7 +11,7 @@ const obfuscatorOptions = {
   identifierNamesGenerator: 'hexadecimal',
   renameGlobals: true,
   renameProperties: true,
-  renamePropertiesMode: 'unsafe',  // Changed to unsafe for better obfuscation
+  renamePropertiesMode: 'safe',  // Change to unsafe for better obfuscation
   selfDefending: true,
   simplify: true,
   splitStrings: true,
