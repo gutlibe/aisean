@@ -1,101 +1,67 @@
 import { defineConfig } from 'vite';
-import obfuscator from 'rollup-plugin-obfuscator';
+import javascriptObfuscator from 'rollup-plugin-javascript-obfuscator';
 
-/**
- * JavaScript Obfuscator Configuration
- * Maximum security settings for production build
- */
+// Define your obfuscation options as a separate object
 const obfuscatorOptions = {
-  // Core obfuscation
   compact: true,
-  simplify: true,
-  target: 'browser',
-  
-  // Control flow manipulation
   controlFlowFlattening: true,
-  controlFlowFlatteningThreshold: 1.0,
+  controlFlowFlatteningThreshold: 0.75,
   deadCodeInjection: true,
-  deadCodeInjectionThreshold: 1.0,
-  
-  // String protection
-  stringArray: true,
-  stringArrayThreshold: 1.0,
-  stringArrayRotate: true,
-  stringArrayShuffle: true,
-  rotateStringArray: true,
-  shuffleStringArray: true,
-  splitStrings: true,
-  splitStringsChunkLength: 5,
-  
-  // String array encoding and indexing
-  stringArrayEncoding: ['rc4', 'base64'],
-  stringArrayIndexesType: ['hexadecimal-number'],
-  stringArrayIndexShift: true,
-  stringArrayCallsTransform: true,
-  stringArrayCallsTransformThreshold: 1.0,
-  
-  // String array wrappers
-  stringArrayWrappersCount: 5,
-  stringArrayWrappersChainedCalls: true,
-  stringArrayWrappersParametersMaxCount: 5,
-  stringArrayWrappersType: 'function',
-  
-  // Identifier transformation
+  deadCodeInjectionThreshold: 0.4,
+  debugProtection: false,
+  debugProtectionInterval: 0,
+  disableConsoleOutput: true,
+  domainLock: [],
+  domainLockRedirectUrl: 'about:blank',
+  forceTransformStrings: [],
+  identifierNamesCache: null,
   identifierNamesGenerator: 'hexadecimal',
+  identifiersDictionary: [],
+  identifiersPrefix: '',
+  ignoreImports: false,
+  inputFileName: '',
+  log: false,
+  numbersToExpressions: false,
+  optionsPreset: 'default',
   renameGlobals: true,
   renameProperties: true,
-  renamePropertiesMode: 'unsafe',
-  transformObjectKeys: true,
-  
-  // Advanced transformations
-  numbersToExpressions: true,
-  unicodeEscapeSequence: true,
-  transformTemplateLiterals: true,
-  
-  // Debug protection
-  debugProtection: true,
-  debugProtectionInterval: 4000,
-  disableConsoleOutput: true,
+  renamePropertiesMode: 'safe',
+  reservedNames: [],
+  reservedStrings: [],
+  seed: 0,
   selfDefending: true,
-  
-  // Others
-  log: false,
-  reservedStrings: []
+  simplify: true,
+  sourceMap: false,
+  sourceMapBaseUrl: '',
+  sourceMapFileName: '',
+  sourceMapMode: 'separate',
+  sourceMapSourcesMode: 'sources-content',
+  splitStrings: true,
+  splitStringsChunkLength: 10,
+  stringArray: true,
+  stringArrayCallsTransform: true,
+  stringArrayCallsTransformThreshold: 0.5,
+  stringArrayEncoding: ['base64'],
+  stringArrayIndexesType: ['hexadecimal-number'],
+  stringArrayIndexShift: true,
+  stringArrayRotate: true,
+  stringArrayShuffle: true,
+  stringArrayWrappersCount: 2,
+  stringArrayWrappersChainedCalls: true,
+  stringArrayWrappersParametersMaxCount: 2,
+  stringArrayWrappersType: 'variable',
+  stringArrayThreshold: 0.75,
+  target: 'browser',
+  transformObjectKeys: true,
+  unicodeEscapeSequence: true
 };
 
-/**
- * Build Logger Plugin
- * Tracks output files and code splitting
- */
-function buildLoggerPlugin() {
-  return {
-    name: 'build-logger-plugin',
-    
-    generateBundle(options, bundle) {
-      const filenames = Object.keys(bundle);
-      const jsFiles = filenames.filter(f => f.startsWith('assets/js/') && f.endsWith('.js'));
-      
-      console.log(`[Logger] Generated ${filenames.length} files (${jsFiles.length} JavaScript files)`);
-      
-      if (jsFiles.length <= 1 && filenames.some(f => f.endsWith('.js'))) {
-        console.warn('[Logger] WARNING: Possible code splitting issue detected');
-      } else if (jsFiles.length > 1) {
-        console.log('[Logger] Code splitting confirmed - multiple JS chunks generated');
-      }
-    }
-  };
-}
+// Log the final obfuscator options so you can verify them in your CI logs
+console.log("Final Obfuscation Options:", JSON.stringify(obfuscatorOptions, null, 2));
 
-/**
- * Vite Configuration
- */
 export default defineConfig({
   root: '.',
   publicDir: 'public',
-  
-  plugins: [
-    buildLoggerPlugin()
-  ],
   
   build: {
     outDir: 'dist',
@@ -104,18 +70,26 @@ export default defineConfig({
     assetsInlineLimit: 0,
     
     rollupOptions: {
-      input: { main: 'index.html' },
-      
+      input: {
+        main: 'index.html'
+      },
       output: {
         entryFileNames: `assets/js/[name].[hash].js`,
         chunkFileNames: `assets/js/[name].[hash].js`,
-        assetFileNames: `assets/[ext]/[name].[hash].[ext]`
+        assetFileNames: `assets/[ext]/[name].[hash].[ext]`,
       },
-      
       plugins: [
-        obfuscator({ options: obfuscatorOptions })
+        javascriptObfuscator({
+          include: ["**/assets/js/**/*.js"],
+          exclude: ["node_modules/**"],
+          options: obfuscatorOptions
+        })
       ]
     }
+  },
+  
+  css: {
+    preprocessorOptions: {}
   },
   
   server: {
