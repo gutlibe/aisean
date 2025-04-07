@@ -1,36 +1,62 @@
+# Workflow name
 name: Build Project
 
+# Controls when the workflow will run
 on:
+  # Triggers the workflow on push events but only for the dev branch
   push:
     branches:
-      - main # Or 'master', depending on your default branch
-  workflow_dispatch: # Allows manual triggering from the Actions tab
+      - dev
 
-# Minimal permissions needed for checkout and artifact upload
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# Concurrency settings to manage multiple runs
+concurrency:
+  # Group runs by workflow and the branch/ref (e.g., refs/heads/dev)
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # Cancel any runs in the same group that are already in progress
+  cancel-in-progress: true
+
+# Permissions needed for the workflow steps
 permissions:
-  contents: read
+  contents: read    # Needed for actions/checkout
+  actions: write   # Needed for cancel-in-progress to function correctly
 
+# Defines the jobs that will run as part of the workflow
 jobs:
+  # The main build job
   build:
+    # The type of runner that the job will run on
     runs-on: ubuntu-latest
+
+    # Sequence of tasks that will be executed as part of the job
     steps:
+      # Step 1: Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # Step 2: Sets up Node.js environment
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20 # Use a current LTS version
+          node-version: 20 # Use a specific Node.js version (e.g., LTS)
 
+      # Step 3: Installs dependencies using npm ci for clean, reproducible installs
       - name: Install dependencies
-        run: npm ci # Use 'ci' for cleaner installs in CI
+        run: npm ci
 
+      # Step 4: Runs the build script defined in your package.json
       - name: Build project
-        run: npm run build # Runs 'vite build'
+        run: npm run build # Assumes this script outputs to ./dist
 
+      # Step 5: Uploads the build output directory as an artifact
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: build-output # Name of the artifact zip file
-          path: ./dist # Path to the directory to upload
-          retention-days: 7 # Optional: How long to keep the artifact (default is 90)
+          # Name of the artifact, includes the run number for uniqueness
+          name: build-output-${{ github.run_number }}
+          # Path to the files/directory to upload
+          path: ./dist
+          # How long to keep the artifact (in days)
+          retention-days: 3
