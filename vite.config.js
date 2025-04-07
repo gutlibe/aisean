@@ -12,7 +12,11 @@ const obfuscatorOptions = {
   disableConsoleOutput: true,
   domainLock: [],
   domainLockRedirectUrl: 'about:blank',
-  forceTransformStrings: [],
+  forceTransformStrings: [ // Added this option
+    /notfound-container/,
+    /notfound-illustration/,
+    /Oops! Lost in Space/
+  ],
   identifierNamesCache: null,
   identifierNamesGenerator: 'hexadecimal',
   identifiersDictionary: [],
@@ -49,7 +53,7 @@ const obfuscatorOptions = {
   stringArrayWrappersChainedCalls: true,
   stringArrayWrappersParametersMaxCount: 2,
   stringArrayWrappersType: 'variable',
-  stringArrayThreshold: 0.1, // Lowered threshold
+  stringArrayThreshold: 0.1, // Keep the low threshold for now
   target: 'browser',
   transformObjectKeys: true,
   unicodeEscapeSequence: true
