@@ -4,55 +4,25 @@ import { obfuscator } from 'rollup-obfuscator';
 export default defineConfig({
   plugins: [
     obfuscator({
-      optionsPreset: 'medium-obfuscation',
+      optionsPreset: 'medium-obfuscation', // Medium level of obfuscation
       sourceMap: false,
-      exclude: ['node_modules/**']
-    })
+      exclude: ['node_modules/**'],
+    }),
   ],
-  root: '.',
-  publicDir: 'public',
+  root: '.', // Default root
+  publicDir: 'public', // Default public directory
   build: {
-    outDir: 'dist',
-    sourcemap: false,
-    cssCodeSplit: false,
-    assetsInlineLimit: 0,
+    outDir: 'dist', // Output directory
+    sourcemap: false, // No source maps
     rollupOptions: {
       input: {
-        main: 'index.html'
+        main: 'index.html', // Your entry point
       },
       output: {
-        entryFileNames: `assets/js/[name].[hash].js`,
-        chunkFileNames: `assets/js/[name].[hash].js`,
-        assetFileNames: `assets/[ext]/[name].[hash].[ext]`
+        entryFileNames: `assets/js/[name].[hash].js`, // Naming for entry files
+        chunkFileNames: `assets/js/[name].[hash].js`, // Naming for chunks
+        assetFileNames: `assets/[ext]/[name].[hash].[ext]`, // Naming for assets
       },
-      // Manual chunking to split files
-      manualChunks: (id) => {
-        if (id.includes('assets/js/chunks')) {
-          // Extract the filename (e.g., 'auth' from 'auth.js')
-          const fileName = id.split('/').pop().replace('.js', '');
-          return fileName; // e.g., 'auth', 'router'
-        }
-        if (id.includes('assets/js/core')) {
-          return 'core'; // Group core files into a 'core' chunk
-        }
-        if (id.includes('assets/js/pages')) {
-          // Split pages into sub-chunks based on directory
-          const parts = id.split('/pages/')[1].split('/');
-          if (parts.length > 1) {
-            return `pages-${parts[0]}-${parts[1].replace('.js', '')}`; // e.g., 'pages-admin-dashboard'
-          }
-        }
-        // Default: bundle into 'vendor' or leave as entry
-        if (id.includes('node_modules')) {
-          return 'vendor';
-        }
-      }
-    }
+    },
   },
-  css: {
-    preprocessorOptions: {}
-  },
-  server: {
-    open: true
-  }
 });
