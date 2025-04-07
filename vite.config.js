@@ -1,7 +1,6 @@
 import { defineConfig } from 'vite';
 import javascriptObfuscator from 'rollup-plugin-javascript-obfuscator';
 
-// Define your obfuscation options as a separate object
 const obfuscatorOptions = {
   compact: true,
   controlFlowFlattening: true,
@@ -50,13 +49,12 @@ const obfuscatorOptions = {
   stringArrayWrappersChainedCalls: true,
   stringArrayWrappersParametersMaxCount: 2,
   stringArrayWrappersType: 'variable',
-  stringArrayThreshold: 0.75,
+  stringArrayThreshold: 0.1, // Lowered threshold
   target: 'browser',
   transformObjectKeys: true,
   unicodeEscapeSequence: true
 };
 
-// Log the final obfuscator options so you can verify them in your CI logs
 console.log("Final Obfuscation Options:", JSON.stringify(obfuscatorOptions, null, 2));
 
 export default defineConfig({
