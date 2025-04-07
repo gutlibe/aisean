@@ -1,13 +1,7 @@
 import { defineConfig } from 'vite';
-import { obfuscator } from 'rollup-obfuscator';
 
 export default defineConfig({
-  plugins: [
-    obfuscator({
-      optionsPreset: 'medium-obfuscation',
-      sourceMap: false
-    })
-  ],
+  plugins: [],
   root: '.',
   publicDir: 'public',
   build: {
