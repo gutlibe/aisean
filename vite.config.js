@@ -1,7 +1,6 @@
 import { defineConfig } from 'vite';
-import obfuscator from 'rollup-plugin-obfuscator'; // Default import for the modern plugin
+import obfuscator from 'rollup-plugin-obfuscator';
 
-// Aggressive options (similar to the ones that worked for obfuscation before)
 const obfuscatorOptions = {
   compact: true,
   controlFlowFlattening: true,
@@ -16,17 +15,17 @@ const obfuscatorOptions = {
   numbersToExpressions: true,
   renameGlobals: true,
   renameProperties: true,
-  renamePropertiesMode: 'unsafe', // Use with caution, test thoroughly! Revert to 'safe' if breaks occur.
+  renamePropertiesMode: 'unsafe',
   rotateStringArray: true,
   selfDefending: true,
   shuffleStringArray: true,
   simplify: true,
   splitStrings: true,
-  splitStringsChunkLength: 5, // Smaller chunks for more splitting
+  splitStringsChunkLength: 5,
   stringArray: true,
   stringArrayCallsTransform: true,
   stringArrayCallsTransformThreshold: 1.0,
-  stringArrayEncoding: ['rc4', 'base64'], // Multiple encodings
+  stringArrayEncoding: ['rc4', 'base64'],
   stringArrayIndexesType: ['hexadecimal-number'],
   stringArrayIndexShift: true,
   stringArrayRotate: true,
@@ -35,12 +34,12 @@ const obfuscatorOptions = {
   stringArrayWrappersChainedCalls: true,
   stringArrayWrappersParametersMaxCount: 5,
   stringArrayWrappersType: 'function',
-  stringArrayThreshold: 1.0, // Process all eligible strings
+  stringArrayThreshold: 1.0,
   target: 'browser',
   transformObjectKeys: true,
-  transformTemplateLiterals: true, // <<< Crucial for HTML
+  transformTemplateLiterals: true,
   unicodeEscapeSequence: true,
-  reservedStrings: [] // Don't reserve strings unless absolutely necessary
+  reservedStrings: []
 };
 
 export default defineConfig({
@@ -50,22 +49,17 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: false,
     cssCodeSplit: false,
-    assetsInlineLimit: 0, // Ensure assets aren't inlined if not desired
+    assetsInlineLimit: 0,
     rollupOptions: {
       input: { main: 'index.html' },
       output: {
-        // <<< THIS SECTION DEFINES THE OUTPUT STRUCTURE >>>
         entryFileNames: `assets/js/[name].[hash].js`,
         chunkFileNames: `assets/js/[name].[hash].js`,
         assetFileNames: `assets/[ext]/[name].[hash].[ext]`
       },
       plugins: [
-        obfuscator({ // Use the modern plugin instance
-          options: obfuscatorOptions,
-          // No include/exclude needed usually, defaults should work.
-          // Add them only if absolutely necessary:
-          // include: ['**/*.js'],
-          // exclude: ['node_modules/**']
+        obfuscator({
+          options: obfuscatorOptions
         })
       ]
     }
