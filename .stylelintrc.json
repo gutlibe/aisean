@@ -9,6 +9,9 @@
       {
         "ignoreAtRules": ["tailwind", "apply", "variants", "responsive", "screen"]
       }
-    ]
+    ],
+    "no-descending-specificity": null,
+    "selector-id-pattern": null,
+    "declaration-block-single-line-max-declarations": null
   }
 }
