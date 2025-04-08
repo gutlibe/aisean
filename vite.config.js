@@ -55,16 +55,16 @@ export default defineConfig({
       },
       
       output: {
-        // File naming patterns
-        entryFileNames: 'assets/js/[hash].js',
-        chunkFileNames: 'assets/js/[hash].js',
+        // File naming patterns with longer hash for better uniqueness
+        entryFileNames: 'assets/js/[hash:20].js',
+        chunkFileNames: 'assets/js/[hash:20].js',
         
-        // Asset organization
+        // Asset organization with extended hash length
         assetFileNames: (assetInfo) => {
           if (assetInfo.name && assetInfo.name.endsWith('.css')) {
-            return 'assets/css/[hash][extname]';
+            return 'assets/css/[hash:20][extname]';
           }
-          return 'assets/[ext]/[hash][extname]';
+          return 'assets/[ext]/[hash:20][extname]';
         },
       },
       
