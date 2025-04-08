@@ -12,6 +12,11 @@
     ],
     "no-descending-specificity": null,
     "selector-id-pattern": null,
-    "declaration-block-single-line-max-declarations": null
+    "declaration-block-single-line-max-declarations": null,
+    
+    "block-no-empty": null,
+    "no-duplicate-selectors": null,
+    "font-family-no-missing-generic-family-keyword": null,
+    "declaration-block-no-shorthand-property-overrides": null
   }
 }
