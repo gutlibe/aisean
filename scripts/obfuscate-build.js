@@ -1,3 +1,4 @@
+// scripts/obfuscate-build.js
 import fs from 'fs/promises';
 import path from 'path';
 import JavaScriptObfuscator from 'javascript-obfuscator';
@@ -7,58 +8,51 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const projectRoot = path.resolve(__dirname, '..');
-const jsBuildDir = path.resolve(projectRoot, 'dist/assets/js');
+// Define both potential JS output directories
+const mainJsBuildDir = path.resolve(projectRoot, 'dist/assets/js');
+const loginJsBuildDir = path.resolve(projectRoot, 'dist/login/assets/js');
 
+// Use the less aggressive options for better performance
 const obfuscationOptions = {
   compact: true,
   simplify: true,
   log: false,
-  
-  // Keep string array protection, but use faster encoding
   stringArray: true,
-  stringArrayEncoding: ['base64'], // Faster than 'rc4'
+  stringArrayEncoding: ['base64'],
   stringArrayThreshold: 0.75,
   stringArrayIndexShift: true,
   stringArrayRotate: true,
   stringArrayShuffle: true,
-  
-  // --- DISABLED FOR PERFORMANCE ---
   controlFlowFlattening: false,
-  // controlFlowFlatteningThreshold: 0.1, // Can re-enable with very low threshold if needed
-  
   deadCodeInjection: false,
-  // deadCodeInjectionThreshold: 0.05, // Can re-enable with very low threshold if needed
-  
   selfDefending: false,
   debugProtection: false,
-  // --- END DISABLED ---
-  
-  transformObjectKeys: false, // Keep false (safer)
-  unicodeEscapeSequence: true, // Low impact, hinders readability
-  numbersToExpressions: true, // Relatively low impact
-  splitStrings: true, // Relatively low impact
-  splitStringsChunkLength: 10, // Slightly larger chunk length
-  
+  transformObjectKeys: false,
+  unicodeEscapeSequence: true,
+  numbersToExpressions: true,
+  splitStrings: true,
+  splitStringsChunkLength: 10,
   identifierNamesGenerator: 'hexadecimal',
-  renameGlobals: false, // Keep false (safer)
-  disableConsoleOutput: true, // Keep this, low impact
+  renameGlobals: false,
+  disableConsoleOutput: true,
 };
 
 
 async function obfuscateFile(filePath) {
   const fileName = path.basename(filePath);
+  const relativePath = path.relative(projectRoot, filePath); // For logging context
   try {
     const code = await fs.readFile(filePath, 'utf8');
     if (!code || code.trim() === '') {
-      console.warn(`Skipping empty file: ${fileName}`);
+      console.warn(`Skipping empty file: ${relativePath}`);
       return;
     }
     if (code.includes('Obfuscation completed')) {
-      console.warn(`Skipping already obfuscated file: ${fileName}`);
+      console.warn(`Skipping already obfuscated file: ${relativePath}`);
       return;
     }
     
-    console.log(`Obfuscating: ${fileName}...`);
+    console.log(`Obfuscating: ${relativePath}...`);
     const startTime = performance.now();
     
     const obfuscationResult = JavaScriptObfuscator.obfuscate(code, obfuscationOptions);
@@ -67,40 +61,52 @@ async function obfuscateFile(filePath) {
     
     await fs.writeFile(filePath, finalCode, 'utf8');
     const endTime = performance.now();
-    console.log(`   Done: ${fileName} (took ${(endTime - startTime).toFixed(2)}ms)`);
+    console.log(`   Done: ${relativePath} (took ${(endTime - startTime).toFixed(2)}ms)`);
     
   } catch (error) {
-    console.error(`Error obfuscating file ${fileName}:`, error.message);
+    console.error(`Error obfuscating file ${relativePath}:`, error.message);
+  }
+}
+
+// Helper to read JS files from a directory, returns empty array on error (e.g., dir not found)
+async function findJsFiles(directory) {
+  try {
+    const files = await fs.readdir(directory);
+    return files
+      .filter(file => file.endsWith('.js') && !file.endsWith('.map'))
+      .map(file => path.join(directory, file)); // Return full paths
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      console.warn(`Warning: Directory not found ${directory}. Skipping search here.`);
+    } else {
+      console.error(`Error reading directory ${directory}:`, error);
+    }
+    return []; // Return empty array if directory doesn't exist or other error
   }
 }
 
 async function runObfuscation() {
-  console.log(`\nStarting post-build obfuscation in: ${jsBuildDir}`);
+  console.log(`\nStarting post-build obfuscation...`);
   const overallStart = performance.now();
   try {
-    let files;
-    try {
-      files = await fs.readdir(jsBuildDir);
-    } catch (error) {
-      if (error.code === 'ENOENT') {
-        console.warn(`Warning: Directory not found ${jsBuildDir}.`);
-        console.warn("Skipping obfuscation. Ensure 'npm run build:vite' ran successfully first.");
-        return;
-      }
-      throw error;
-    }
+    // Find JS files in both locations
+    const mainJsFiles = await findJsFiles(mainJsBuildDir);
+    const loginJsFiles = await findJsFiles(loginJsBuildDir);
     
-    const jsFiles = files.filter(file => file.endsWith('.js') && !file.endsWith('.map'));
+    const allJsFiles = [...mainJsFiles, ...loginJsFiles]; // Combine the lists
     
-    if (jsFiles.length === 0) {
-      console.warn("No JavaScript files found to obfuscate in", jsBuildDir);
+    if (allJsFiles.length === 0) {
+      console.warn("No JavaScript files found to obfuscate in expected directories.");
+      console.warn(`Checked: ${mainJsBuildDir}`);
+      console.warn(`Checked: ${loginJsBuildDir}`);
+      console.warn("Ensure 'npm run build:vite' ran successfully first.");
       return;
     }
     
-    console.log(`Found ${jsFiles.length} JavaScript file(s) to obfuscate.`);
+    console.log(`Found ${allJsFiles.length} JavaScript file(s) to obfuscate.`);
     
-    for (const file of jsFiles) {
-      const fullPath = path.join(jsBuildDir, file);
+    // Process all found JS files
+    for (const fullPath of allJsFiles) {
       await obfuscateFile(fullPath);
     }
     

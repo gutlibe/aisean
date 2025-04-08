@@ -1,3 +1,4 @@
+// vite.config.js
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
 
@@ -8,7 +9,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
-    cssCodeSplit: false, // Creates one CSS file, making the naming simpler
+    cssCodeSplit: false, // Keep as one main CSS file for simplicity unless needed otherwise
     assetsInlineLimit: 0,
     minify: 'terser',
     terserOptions: {
@@ -23,19 +24,23 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
-        login: resolve(__dirname, 'login/index.html')
+        login: resolve(__dirname, 'login/index.html') // Your login entry point
       },
       output: {
-        // Use [hash] only for JS entry points and chunks
-        entryFileNames: `assets/js/[hash].js`,
-        chunkFileNames: `assets/js/[hash].js`,
-        // Use [hash] only for other assets like CSS, images etc.
+        // Function to determine output path based on entry chunk name
+        entryFileNames: (chunkInfo) => {
+          if (chunkInfo.name === 'login') {
+            return 'login/assets/js/[hash].js'; // Specific path for login JS
+          }
+          return 'assets/js/[hash].js'; // Default path for other entries (main)
+        },
+        // Chunks might be shared, place them in the main assets folder
+        chunkFileNames: 'assets/js/[hash].js',
+        // Keep assets like CSS, images in the main assets folder
         assetFileNames: (assetInfo) => {
-          // Ensure CSS files also use hash-only naming
           if (assetInfo.name && assetInfo.name.endsWith('.css')) {
             return 'assets/css/[hash][extname]';
           }
-          // Default for other assets (images, fonts, etc.)
           return 'assets/[ext]/[hash][extname]';
         },
       },
