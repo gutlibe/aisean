@@ -11,7 +11,7 @@
     "copy:login": "cpy \"login/**\" \"dist/login\"",
     "obfuscate:alljs": "node scripts/obfuscate-build.js",
     "minify:main-css": "lightningcss --minify --bundle --targets '>= 0.25%' dist/assets/css/**/*.css -d dist/assets/css",
-    "minify:login-css": "lightningcss --minify --targets '>= 0.25%' dist/login/assets/css/**/*.css -d dist/login/assets/css",
+    "minify:login-css": "lightningcss --minify --targets '>= 0.25%' dist/login/assets/css/*.css -d dist/login/assets/css",
     "build": "npm run clean && npm run lint:css && npm run build:vite && npm run copy:login && npm run obfuscate:alljs && npm run minify:main-css && npm run minify:login-css",
     "preview": "vite preview --outDir dist"
   },
