@@ -16,14 +16,14 @@
     "preview": "vite preview --outDir dist"
   },
   "devDependencies": {
-    "vite": "^5.3.1",
+    "cpy-cli": "^5.0.0",
     "javascript-obfuscator": "^4.1.1",
     "lightningcss-cli": "^1.25.1",
-    "terser": "^5.31.1",
+    "rimraf": "^5.0.7",
     "stylelint": "^16.6.1",
     "stylelint-config-standard": "^36.0.0",
-    "vite-plugin-stylelint": "^5.3.1",
-    "cpy-cli": "^5.0.0",
-    "rimraf": "^5.0.7"
+    "terser": "^5.31.1",
+    "vite": "^5.3.1",
+    "vite-plugin-stylelint": "^5.3.1"
   }
 }
