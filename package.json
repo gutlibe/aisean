@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "lint:css": "stylelint \"**/*.css\"",
+    "lint:css": "stylelint \"**/*.css\" --fix",
     "clean": "rimraf dist",
     "build:vite": "vite build",
     "copy:login": "cpy \"login/**\" \"dist/login\"",
