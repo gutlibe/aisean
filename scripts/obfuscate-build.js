@@ -13,26 +13,35 @@ const obfuscationOptions = {
   compact: true,
   simplify: true,
   log: false,
+  
+  // Keep string array protection, but use faster encoding
   stringArray: true,
-  stringArrayEncoding: ['rc4'],
+  stringArrayEncoding: ['base64'], // Faster than 'rc4'
   stringArrayThreshold: 0.75,
   stringArrayIndexShift: true,
   stringArrayRotate: true,
   stringArrayShuffle: true,
-  controlFlowFlattening: true,
-  controlFlowFlatteningThreshold: 0.5,
-  deadCodeInjection: true,
-  deadCodeInjectionThreshold: 0.2,
-  transformObjectKeys: false,
-  unicodeEscapeSequence: true,
-  numbersToExpressions: true,
-  splitStrings: true,
-  splitStringsChunkLength: 5,
+  
+  // --- DISABLED FOR PERFORMANCE ---
+  controlFlowFlattening: false,
+  // controlFlowFlatteningThreshold: 0.1, // Can re-enable with very low threshold if needed
+  
+  deadCodeInjection: false,
+  // deadCodeInjectionThreshold: 0.05, // Can re-enable with very low threshold if needed
+  
+  selfDefending: false,
+  debugProtection: false,
+  // --- END DISABLED ---
+  
+  transformObjectKeys: false, // Keep false (safer)
+  unicodeEscapeSequence: true, // Low impact, hinders readability
+  numbersToExpressions: true, // Relatively low impact
+  splitStrings: true, // Relatively low impact
+  splitStringsChunkLength: 10, // Slightly larger chunk length
+  
   identifierNamesGenerator: 'hexadecimal',
-  renameGlobals: false,
-  selfDefending: true,
-  debugProtection: true,
-  disableConsoleOutput: true,
+  renameGlobals: false, // Keep false (safer)
+  disableConsoleOutput: true, // Keep this, low impact
 };
 
 
