@@ -8,7 +8,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
-    cssCodeSplit: false,
+    cssCodeSplit: false, // Creates one CSS file, making the naming simpler
     assetsInlineLimit: 0,
     minify: 'terser',
     terserOptions: {
@@ -26,13 +26,17 @@ export default defineConfig({
         login: resolve(__dirname, 'login/index.html')
       },
       output: {
-        entryFileNames: `assets/js/[name].[hash].js`,
-        chunkFileNames: `assets/js/[name].[hash].js`,
+        // Use [hash] only for JS entry points and chunks
+        entryFileNames: `assets/js/[hash].js`,
+        chunkFileNames: `assets/js/[hash].js`,
+        // Use [hash] only for other assets like CSS, images etc.
         assetFileNames: (assetInfo) => {
+          // Ensure CSS files also use hash-only naming
           if (assetInfo.name && assetInfo.name.endsWith('.css')) {
-            return 'assets/css/[name].[hash][extname]';
+            return 'assets/css/[hash][extname]';
           }
-          return 'assets/[ext]/[name].[hash][extname]';
+          // Default for other assets (images, fonts, etc.)
+          return 'assets/[ext]/[hash][extname]';
         },
       },
       plugins: []

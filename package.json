@@ -7,7 +7,7 @@
     "dev": "vite",
     "build:vite": "vite build",
     "obfuscate:js": "node scripts/obfuscate-build.js",
-    "minify:css": "lightningcss --minify --bundle --targets '>= 0.25%' dist/assets/css/**/*.css -d dist/assets/css --overwrite",
+    "minify:css": "lightningcss --minify --bundle --targets '>= 0.25%' dist/assets/css/**/*.css -d dist/assets/css",
     "build": "npm run build:vite && npm run obfuscate:js && npm run minify:css",
     "preview": "vite preview"
   },
