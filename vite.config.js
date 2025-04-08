@@ -1,15 +1,20 @@
-// vite.config.js
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
+import stylelint from 'vite-plugin-stylelint';
 
 export default defineConfig({
-  plugins: [],
+  plugins: [
+    stylelint({
+      fix: false,
+      quiet: false,
+    }),
+  ],
   root: '.',
   publicDir: 'public',
   build: {
     outDir: 'dist',
     sourcemap: false,
-    cssCodeSplit: false, // Keep as one main CSS file for simplicity unless needed otherwise
+    cssCodeSplit: false,
     assetsInlineLimit: 0,
     minify: 'terser',
     terserOptions: {
@@ -24,19 +29,10 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
-        login: resolve(__dirname, 'login/index.html') // Your login entry point
       },
       output: {
-        // Function to determine output path based on entry chunk name
-        entryFileNames: (chunkInfo) => {
-          if (chunkInfo.name === 'login') {
-            return 'login/assets/js/[hash].js'; // Specific path for login JS
-          }
-          return 'assets/js/[hash].js'; // Default path for other entries (main)
-        },
-        // Chunks might be shared, place them in the main assets folder
+        entryFileNames: 'assets/js/[hash].js',
         chunkFileNames: 'assets/js/[hash].js',
-        // Keep assets like CSS, images in the main assets folder
         assetFileNames: (assetInfo) => {
           if (assetInfo.name && assetInfo.name.endsWith('.css')) {
             return 'assets/css/[hash][extname]';
