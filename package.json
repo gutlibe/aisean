@@ -1,22 +1,22 @@
 {
-  "name": "gutlibe-aisean",
-  "private": true,
-  "version": "1.0.0",
-  "type": "module",
   "scripts": {
     "dev": "vite",
     "lint:css": "stylelint \"**/*.css\" --fix",
     "clean": "rimraf dist",
+    "pre-build:css-hash": "node scripts/pre-build-custom-hash.js",
     "build:vite": "vite build",
     "copy:login": "cpy \"login/**\" \"dist/login\"",
     "obfuscate:alljs": "node scripts/obfuscate-build.js",
     "minify:main-css": "lightningcss --minify --bundle --targets '>= 0.25%' dist/assets/css/**/*.css -d dist/assets/css",
     "minify:login-css": "lightningcss --minify --targets '>= 0.25%' dist/login/assets/css/*.css -d dist/login/assets/css",
-    "build": "npm run clean && npm run lint:css && npm run build:vite && npm run copy:login && npm run obfuscate:alljs && npm run minify:main-css && npm run minify:login-css",
+    "build": "npm run clean && npm run lint:css && npm run pre-build:css-hash && npm run build:vite && npm run copy:login && npm run obfuscate:alljs && npm run minify:main-css && npm run minify:login-css",
     "preview": "vite preview --outDir dist"
   },
   "devDependencies": {
+    "acorn": "^8.10.0",
+    "acorn-walk": "^8.2.0",
     "cpy-cli": "^5.0.0",
+    "escodegen": "^2.1.0",
     "javascript-obfuscator": "^4.1.1",
     "lightningcss-cli": "^1.25.1",
     "rimraf": "^5.0.7",
