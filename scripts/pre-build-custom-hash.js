@@ -15,11 +15,11 @@ const projectRoot = path.resolve(__dirname, '..');
 
 // Configuration
 const config = {
-  // Core CSS files are now in the root CSS directory
+  // Core CSS files in the root directory
   coreCssDir: path.join(projectRoot, 'assets/css'),
-  coreCssFiles: ['base.css', 'theme.css', 'loader.css', 'page.css', 'menu.css'],
+  coreCssFiles: ['base', 'theme', 'loader', 'page', 'menu'], // Added menu to core files
   
-  // Page-specific CSS files
+  // Component and page-specific CSS
   cssSourceDirs: [
     path.join(projectRoot, 'assets/css/pages'),
     path.join(projectRoot, 'assets/css/components')
@@ -31,12 +31,10 @@ const config = {
     path.join(projectRoot, 'assets/js/pages')
   ],
   
-  // CSS Manager file
-  cssManagerPath: path.join(projectRoot, 'assets/js/chunks/css-manager.js'),
+  // CSS Manager file to update
+  cssManagerFile: path.join(projectRoot, 'assets/js/chunks/css-manager.js'),
   
-  // Hash length for generated filenames
   hashLength: 8,
-  
   // Public directory for development
   publicCssDir: path.join(projectRoot, 'public/assets/css')
 };
@@ -104,45 +102,6 @@ async function findCssFiles() {
 }
 
 /**
- * Processes core CSS files
- * @returns {Promise<Object>} - Mapping from original filenames to hashed filenames
- */
-async function processCoreCssFiles() {
-  const coreMapping = {};
-  
-  console.log('Processing core CSS files...');
-  
-  for (const cssFile of config.coreCssFiles) {
-    const filePath = path.join(config.coreCssDir, cssFile);
-    
-    try {
-      await fs.access(filePath);
-      
-      const hash = await calculateFileHash(filePath);
-      const extname = path.extname(cssFile);
-      const basename = path.basename(cssFile, extname);
-      const newFileName = `${basename}.${hash}${extname}`;
-      
-      // Copy to output directory with hashed name
-      const outputPath = path.join(config.cssOutputDir, newFileName);
-      await fs.copyFile(filePath, outputPath);
-      
-      // Also copy to public directory for development
-      const publicOutputPath = path.join(config.publicCssDir, newFileName);
-      await fs.copyFile(filePath, publicOutputPath);
-      
-      // Store mapping
-      coreMapping[cssFile] = newFileName;
-      console.log(`Processed core CSS: ${cssFile} -> ${newFileName}`);
-    } catch (error) {
-      console.error(`Error processing core CSS file ${cssFile}:`, error);
-    }
-  }
-  
-  return coreMapping;
-}
-
-/**
  * Finds all JS files that might reference CSS files
  * @returns {Promise<string[]>} - Array of JS file paths
  */
@@ -173,7 +132,48 @@ async function ensureDirectoryExists(dir) {
 }
 
 /**
- * Processes CSS files: hashes, copies, and renames them
+ * Processes core CSS files: hashes and copies them
+ * @returns {Promise<Object>} - Mapping from original filenames to hashed filenames
+ */
+async function processCoreCssFiles() {
+  const coreCssMapping = {};
+  
+  console.log(`Processing ${config.coreCssFiles.length} core CSS files`);
+  
+  // Ensure output directories exist
+  await ensureDirectoryExists(config.cssOutputDir);
+  await ensureDirectoryExists(config.publicCssDir);
+  
+  for (const baseName of config.coreCssFiles) {
+    const cssFile = path.join(config.coreCssDir, `${baseName}.css`);
+    
+    try {
+      // Check if file exists
+      await fs.access(cssFile);
+      
+      const hash = await calculateFileHash(cssFile);
+      const newFileName = `${baseName}.${hash}.css`;
+      
+      // Copy to assets/css/ (for build)
+      const outputPath = path.join(config.cssOutputDir, newFileName);
+      await fs.copyFile(cssFile, outputPath);
+      
+      // Also copy to public/assets/css/ (for development)
+      const publicOutputPath = path.join(config.publicCssDir, newFileName);
+      await fs.copyFile(cssFile, publicOutputPath);
+      
+      coreCssMapping[`${baseName}.css`] = newFileName;
+      console.log(`Processed core CSS: ${baseName}.css -> ${newFileName}`);
+    } catch (error) {
+      console.error(`Error processing core CSS file ${cssFile}:`, error);
+    }
+  }
+  
+  return coreCssMapping;
+}
+
+/**
+ * Processes page and component CSS files: hashes, copies, and renames them
  * @returns {Promise<Object>} - Mapping from original paths to new paths
  */
 async function processCssFiles() {
@@ -287,72 +287,87 @@ async function updateJsFiles(cssMapping) {
 }
 
 /**
- * Updates the CSS Manager file to use hashed filenames
- * @param {Object} coreMapping - Mapping of core CSS files
- * @param {Object} cssMapping - Mapping of other CSS files
+ * Updates the CSS Manager file with hashed filenames
+ * @param {Object} coreCssMapping - Mapping for core CSS files
+ * @param {Object} cssMapping - Mapping for component and page CSS files
  * @returns {Promise<boolean>} - Success status
  */
-async function updateCssManager(coreMapping, cssMapping) {
+async function updateCssManager(coreCssMapping, cssMapping) {
   try {
-    console.log('Updating CSS Manager...');
+    if (!config.cssManagerFile) {
+      console.log('CSS Manager file not specified, skipping update');
+      return false;
+    }
     
-    // Read the CSS Manager file
-    const cssManagerContent = await fs.readFile(config.cssManagerPath, 'utf8');
+    console.log(`Updating CSS Manager: ${config.cssManagerFile}`);
     
-    // Parse the file
-    const ast = acorn.parse(cssManagerContent, { 
+    const fileContent = await fs.readFile(config.cssManagerFile, 'utf8');
+    
+    // Parse the JS file
+    const ast = acorn.parse(fileContent, { 
       ecmaVersion: 2020,
       sourceType: 'module'
     });
     
     let modified = false;
     
-    // Find and update the cssConfig object
+    // Find the cssConfig object in the constructor
     walk.simple(ast, {
-      Property(node) {
-        // Look for the core array in cssConfig
-        if (node.key?.name === 'core' && node.value?.type === 'ArrayExpression') {
-          const coreArray = node.value;
-          
-          // Update core CSS files
-          coreArray.elements.forEach((element, index) => {
-            if (element.type === 'Literal' && typeof element.value === 'string') {
-              const cssName = element.value + '.css';
-              if (coreMapping[cssName]) {
-                // Remove the .css extension from the mapping
-                const newName = coreMapping[cssName].replace(/\.css$/, '');
-                coreArray.elements[index].value = newName;
-                modified = true;
-                console.log(`  Updated core CSS in manager: "${element.value}" → "${newName}"`);
+      ObjectExpression(node) {
+        // Look for the cssConfig object
+        const isCssConfigObject = node.properties.some(prop => 
+          prop.key && prop.key.type === 'Identifier' && 
+          (prop.key.name === 'core' || prop.key.name === 'components')
+        );
+        
+        if (isCssConfigObject) {
+          // Process each property (core, components, pages)
+          node.properties.forEach(prop => {
+            if (prop.key && prop.key.type === 'Identifier') {
+              // Update core CSS files array
+              if (prop.key.name === 'core' && prop.value.type === 'ArrayExpression') {
+                prop.value.elements.forEach((element, index) => {
+                  if (element.type === 'Literal' && typeof element.value === 'string') {
+                    const cssFile = `${element.value}.css`;
+                    const hashedFile = coreCssMapping[cssFile];
+                    
+                    if (hashedFile) {
+                      // Remove the .css extension for the array
+                      const newValue = hashedFile.replace(/\.css$/, '');
+                      prop.value.elements[index].value = newValue;
+                      modified = true;
+                      console.log(`  Updated core CSS: "${element.value}" → "${newValue}"`);
+                    }
+                  }
+                });
+              }
+              
+              // Update components CSS files array
+              if (prop.key.name === 'components' && prop.value.type === 'ArrayExpression') {
+                prop.value.elements.forEach((element, index) => {
+                  if (element.type === 'Literal' && typeof element.value === 'string') {
+                    const componentPath = `components/${element.value}.css`;
+                    const hashedFile = cssMapping[componentPath];
+                    
+                    if (hashedFile) {
+                      // Remove the .css extension for the array
+                      const newValue = hashedFile.replace(/\.css$/, '');
+                      prop.value.elements[index].value = newValue;
+                      modified = true;
+                      console.log(`  Updated component CSS: "${element.value}" → "${newValue}"`);
+                    }
+                  }
+                });
               }
             }
           });
-        }
-        
-        // Look for the components array in cssConfig
-        if (node.key?.name === 'components' && node.value?.type === 'ArrayExpression') {
-          const componentsArray = node.value;
-          
-          // Update component CSS files - menu.css is now a core file, so we might need to remove it
-          for (let i = componentsArray.elements.length - 1; i >= 0; i--) {
-            const element = componentsArray.elements[i];
-            if (element.type === 'Literal' && element.value === 'menu') {
-              // Remove menu from components array as it's now a core file
-              componentsArray.elements.splice(i, 1);
-              modified = true;
-              console.log(`  Removed 'menu' from components array in CSS Manager`);
-            }
-          }
         }
       }
     });
     
     if (modified) {
-      // Generate updated code
       const updatedCode = escodegen.generate(ast);
-      
-      // Write back to the file
-      await fs.writeFile(config.cssManagerPath, updatedCode, 'utf8');
+      await fs.writeFile(config.cssManagerFile, updatedCode, 'utf8');
       console.log('CSS Manager updated successfully');
       return true;
     } else {
@@ -372,24 +387,22 @@ async function main() {
   console.log('Starting pre-build CSS hashing process...');
   
   try {
-    // Process core CSS files first
-    const coreMapping = await processCoreCssFiles();
+    // Process core CSS files first (including menu.css)
+    const coreCssMapping = await processCoreCssFiles();
     
-    // Process other CSS files
+    // Process component and page CSS files
     const cssMapping = await processCssFiles();
     
-    // Combine mappings
-    const combinedMapping = { ...cssMapping, ...Object.fromEntries(
-      Object.entries(coreMapping).map(([key, value]) => [`${key}`, value])
-    )};
+    // Combine the mappings
+    const combinedMapping = { ...coreCssMapping, ...cssMapping };
     
     // Update JS files with new CSS paths
     await updateJsFiles(combinedMapping);
     
-    // Update CSS Manager
-    await updateCssManager(coreMapping, cssMapping);
+    // Update the CSS Manager file
+    await updateCssManager(coreCssMapping, cssMapping);
     
-    // Write the mapping to a file for reference and for Vite config
+    // Write the mapping to a file for reference
     await fs.writeFile(
       path.join(projectRoot, 'css-mapping.json'), 
       JSON.stringify(combinedMapping, null, 2), 

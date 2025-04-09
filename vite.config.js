@@ -2,7 +2,6 @@ import { defineConfig } from 'vite';
 import { resolve } from 'path';
 import stylelint from 'vite-plugin-stylelint';
 import fs from 'fs';
-import path from 'path';
 
 // Check if css-mapping.json exists
 let cssMapping = {};
@@ -18,38 +17,6 @@ try {
 // Create a set of hashed filenames for quick lookup
 const hashedCssFiles = new Set(Object.values(cssMapping));
 
-// Create a plugin to clean up original CSS files after build
-const cleanupOriginalFiles = () => {
-  return {
-    name: 'cleanup-original-files',
-    closeBundle: async () => {
-      const distCssDir = path.join(__dirname, 'dist/assets/css');
-      
-      try {
-        // Get all CSS files in the dist directory
-        const files = await fs.promises.readdir(distCssDir);
-        
-        for (const file of files) {
-          // Skip hashed files
-          if (hashedCssFiles.has(file)) continue;
-          
-          // Skip files that match our hashed pattern (name.hash.css)
-          if (/\.[a-f0-9]{8}\.css$/.test(file)) continue;
-          
-          // If it's an original file that we've hashed, remove it
-          const originalPath = path.join(distCssDir, file);
-          if (Object.keys(cssMapping).some(key => key.endsWith(file))) {
-            console.log(`Removing original CSS file: ${file}`);
-            await fs.promises.unlink(originalPath);
-          }
-        }
-      } catch (error) {
-        console.error('Error cleaning up original CSS files:', error);
-      }
-    }
-  };
-};
-
 export default defineConfig({
   root: '.',
   publicDir: 'public',
@@ -59,7 +26,6 @@ export default defineConfig({
       fix: false,
       quiet: false,
     }),
-    cleanupOriginalFiles()
   ],
   
   build: {
@@ -91,7 +57,12 @@ export default defineConfig({
               return 'assets/css/[name]';
             }
             
-            // For any other CSS files, use the default hashing
+            // For any CSS files that might have been missed
+            if (/\.[a-f0-9]{8}\.css$/.test(assetInfo.name)) {
+              return 'assets/css/[name]';
+            }
+            
+            // Default for other CSS files
             return 'assets/css/[hash:20][extname]';
           }
           
