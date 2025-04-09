@@ -532,6 +532,51 @@ async function cleanOriginalLoginFiles() {
   }
 }
 
+async function minifyMainCssFiles() {
+  console.log('Minifying main CSS files...');
+  
+  try {
+    const cssDir = config.cssOutputDir;
+    const entries = await fs.readdir(cssDir, { withFileTypes: true });
+    
+    for (const entry of entries) {
+      if (!entry.isDirectory() && entry.name.endsWith('.css') && /^[a-f0-9]{16}\.css$/.test(entry.name)) {
+        const cssFile = path.join(cssDir, entry.name);
+        
+        try {
+          // Use lightningcss to minify the file in place
+          const command = `npx lightningcss --minify --targets '>= 0.25%' "${cssFile}" -o "${cssFile}"`;
+          execSync(command, { stdio: 'inherit' });
+          console.log(`Minified main CSS file: ${entry.name}`);
+        } catch (error) {
+          console.error(`Error minifying CSS file ${cssFile}:`, error);
+        }
+      }
+    }
+    
+    // Also minify CSS files in the public directory
+    const publicCssDir = config.publicCssDir;
+    const publicEntries = await fs.readdir(publicCssDir, { withFileTypes: true });
+    
+    for (const entry of publicEntries) {
+      if (!entry.isDirectory() && entry.name.endsWith('.css') && /^[a-f0-9]{16}\.css$/.test(entry.name)) {
+        const cssFile = path.join(publicCssDir, entry.name);
+        
+        try {
+          // Use lightningcss to minify the file in place
+          const command = `npx lightningcss --minify --targets '>= 0.25%' "${cssFile}" -o "${cssFile}"`;
+          execSync(command, { stdio: 'inherit' });
+          console.log(`Minified public CSS file: ${entry.name}`);
+        } catch (error) {
+          console.error(`Error minifying CSS file ${cssFile}:`, error);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error minifying main CSS files:', error);
+  }
+}
+
 async function minifyLoginCssFiles() {
   console.log('Minifying login CSS files...');
   
@@ -602,7 +647,8 @@ async function main() {
     await updateCssManager(coreCssMapping, cssMapping);
     await updateLoginHtmlFiles(loginCssMapping, loginJsMapping);
     
-    // Minify login files
+    // Minify all CSS and JS files
+    await minifyMainCssFiles();
     await minifyLoginCssFiles();
     await minifyLoginJsFiles();
     
