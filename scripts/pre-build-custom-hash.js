@@ -13,19 +13,22 @@ const __dirname = dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..');
 
 const config = {
+  // Core CSS files in the root directory (now including menu)
   coreCssDir: path.join(projectRoot, 'assets/css'),
   coreCssFiles: ['base', 'theme', 'loader', 'page', 'menu'],
   
+  // Page-specific CSS (no more components)
   cssSourceDirs: [
-    path.join(projectRoot, 'assets/css/pages'),
-    path.join(projectRoot, 'assets/css/components')
+    path.join(projectRoot, 'assets/css/pages')
   ],
   cssOutputDir: path.join(projectRoot, 'assets/css'),
   
+  // JS files to update
   jsSourceDirs: [
     path.join(projectRoot, 'assets/js/pages')
   ],
   
+  // CSS Manager file to update
   cssManagerFile: path.join(projectRoot, 'assets/js/chunks/css-manager.js'),
   
   hashLength: 8,
@@ -259,6 +262,7 @@ async function updateCssManager(coreCssMapping, cssMapping) {
         if (isCssConfigObject) {
           node.properties.forEach(prop => {
             if (prop.key && prop.key.type === 'Identifier') {
+              // Update core CSS files array (now including menu)
               if (prop.key.name === 'core' && prop.value.type === 'ArrayExpression') {
                 prop.value.elements.forEach((element, index) => {
                   if (element.type === 'Literal' && typeof element.value === 'string') {
@@ -275,17 +279,20 @@ async function updateCssManager(coreCssMapping, cssMapping) {
                 });
               }
               
+              // We still check components array for backward compatibility
+              // but we don't expect to find menu there anymore
               if (prop.key.name === 'components' && prop.value.type === 'ArrayExpression') {
                 prop.value.elements.forEach((element, index) => {
                   if (element.type === 'Literal' && typeof element.value === 'string') {
-                    const componentPath = `components/${element.value}.css`;
+                    // We're not looking for menu here anymore
+                    const componentPath = `pages/${element.value}.css`;
                     const hashedFile = cssMapping[componentPath];
                     
                     if (hashedFile) {
                       const newValue = hashedFile.replace(/\.css$/, '');
                       prop.value.elements[index].value = newValue;
                       modified = true;
-                      console.log(`  Updated component CSS: "${element.value}" → "${newValue}"`);
+                      console.log(`  Updated page CSS: "${element.value}" → "${newValue}"`);
                     }
                   }
                 });
@@ -315,7 +322,8 @@ async function cleanOriginalCssFiles() {
   console.log('Cleaning original CSS files from public directory...');
   
   try {
-    for (const dir of [...config.cssSourceDirs, config.coreCssDir]) {
+    // Clean pages directory
+    for (const dir of config.cssSourceDirs) {
       const publicDir = path.join(config.publicCssDir, path.basename(dir));
       
       try {
@@ -329,6 +337,7 @@ async function cleanOriginalCssFiles() {
       }
     }
     
+    // Clean original core CSS files
     for (const baseName of config.coreCssFiles) {
       const originalFile = path.join(config.publicCssDir, `${baseName}.css`);
       try {
@@ -339,6 +348,18 @@ async function cleanOriginalCssFiles() {
         if (error.code !== 'ENOENT') {
           console.error(`Error removing file ${originalFile}:`, error);
         }
+      }
+    }
+    
+    // Remove components directory if it exists (should be empty now)
+    const componentsDir = path.join(config.publicCssDir, 'components');
+    try {
+      await fs.access(componentsDir);
+      await fs.rm(componentsDir, { recursive: true, force: true });
+      console.log(`Removed components directory: ${componentsDir}`);
+    } catch (error) {
+      if (error.code !== 'ENOENT') {
+        console.error(`Error removing components directory: ${error}`);
       }
     }
   } catch (error) {
