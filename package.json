@@ -10,6 +10,7 @@
     "build": "npm run clean && npm run lint:css && npm run pre-build:css-hash && npm run build:vite && npm run copy:login && npm run obfuscate:alljs",
     "preview": "vite preview --outDir dist"
   },
+  
   "devDependencies": {
     "acorn": "^8.10.0",
     "acorn-walk": "^8.2.0",
