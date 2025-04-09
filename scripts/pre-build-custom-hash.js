@@ -7,6 +7,7 @@ import { dirname } from 'path';
 import * as acorn from 'acorn';
 import * as walk from 'acorn-walk';
 import * as escodegen from 'escodegen';
+import { execSync } from 'child_process';
 
 // Get the current directory
 const __filename = fileURLToPath(import.meta.url);
@@ -24,7 +25,6 @@ const config = {
     path.join(projectRoot, 'assets/js/pages')
   ],
   hashLength: 8,
-  // Add public directory for copying to ensure files are available during development
   publicCssDir: path.join(projectRoot, 'public/assets/css')
 };
 
@@ -117,7 +117,21 @@ async function ensureDirectoryExists(dir) {
 }
 
 /**
- * Processes CSS files: hashes, copies, and renames them
+ * Minifies a CSS file using lightningcss
+ * @param {string} inputPath - Path to input CSS file
+ * @param {string} outputPath - Path to output CSS file
+ */
+function minifyCssFile(inputPath, outputPath) {
+  try {
+    execSync(`npx lightningcss --minify --targets '>= 0.25%' "${inputPath}" -o "${outputPath}"`);
+    console.log(`  Minified: ${path.basename(outputPath)}`);
+  } catch (error) {
+    console.error(`  Error minifying ${inputPath}:`, error.message);
+  }
+}
+
+/**
+ * Processes CSS files: hashes, copies, minifies, and renames them
  * @returns {Promise<Object>} - Mapping from original paths to new paths
  */
 async function processCssFiles() {
@@ -140,13 +154,22 @@ async function processCssFiles() {
     const basename = path.basename(flattenedName, extname);
     const newFileName = `${basename}.${hash}${extname}`;
     
-    // Copy to assets/css/ (for build)
+    // Create a temporary file for minification
+    const tempOutputPath = path.join(config.cssOutputDir, `temp_${newFileName}`);
+    
+    // Copy to temp file
+    await fs.copyFile(cssFile, tempOutputPath);
+    
+    // Minify the CSS file
     const outputPath = path.join(config.cssOutputDir, newFileName);
-    await fs.copyFile(cssFile, outputPath);
+    minifyCssFile(tempOutputPath, outputPath);
+    
+    // Remove temp file
+    await fs.unlink(tempOutputPath);
     
     // Also copy to public/assets/css/ (for development)
     const publicOutputPath = path.join(config.publicCssDir, newFileName);
-    await fs.copyFile(cssFile, publicOutputPath);
+    await fs.copyFile(outputPath, publicOutputPath);
     
     const originalRelativePath = path.relative(path.join(baseDir, '..'), cssFile).replace(/\\/g, '/');
     const newRelativePath = newFileName;

@@ -7,23 +7,24 @@
     "build:vite": "vite build",
     "copy:login": "cpy \"login/**\" \"dist/login\"",
     "obfuscate:alljs": "node scripts/obfuscate-build.js",
-    "minify:main-css": "lightningcss --minify --bundle --targets '>= 0.25%' dist/assets/css/**/*.css -d dist/assets/css",
+    "minify:core-css": "lightningcss --minify --targets '>= 0.25%' dist/assets/css/base.css dist/assets/css/theme.css dist/assets/css/loader.css dist/assets/css/page.css -d dist/assets/css",
     "minify:login-css": "lightningcss --minify --targets '>= 0.25%' dist/login/assets/css/*.css -d dist/login/assets/css",
-    "build": "npm run clean && npm run lint:css && npm run pre-build:css-hash && npm run build:vite && npm run copy:login && npm run obfuscate:alljs && npm run minify:main-css && npm run minify:login-css",
+    "build": "npm run clean && npm run lint:css && npm run pre-build:css-hash && npm run build:vite && npm run copy:login && npm run obfuscate:alljs && npm run minify:core-css && npm run minify:login-css",
     "preview": "vite preview --outDir dist"
   },
-  "devDependencies": {
-    "acorn": "^8.10.0",
-    "acorn-walk": "^8.2.0",
-    "cpy-cli": "^5.0.0",
-    "escodegen": "^2.1.0",
-    "javascript-obfuscator": "^4.1.1",
-    "lightningcss-cli": "^1.25.1",
-    "rimraf": "^5.0.7",
-    "stylelint": "^16.6.1",
-    "stylelint-config-standard": "^36.0.0",
-    "terser": "^5.31.1",
-    "vite": "^5.3.1",
-    "vite-plugin-stylelint": "^5.3.1"
-  }
+
+"devDependencies": {
+  "acorn": "^8.10.0",
+  "acorn-walk": "^8.2.0",
+  "cpy-cli": "^5.0.0",
+  "escodegen": "^2.1.0",
+  "javascript-obfuscator": "^4.1.1",
+  "lightningcss-cli": "^1.25.1",
+  "rimraf": "^5.0.7",
+  "stylelint": "^16.6.1",
+  "stylelint-config-standard": "^36.0.0",
+  "terser": "^5.31.1",
+  "vite": "^5.3.1",
+  "vite-plugin-stylelint": "^5.3.1"
+}
 }
