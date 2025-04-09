@@ -7,7 +7,7 @@ import { dirname } from 'path';
 import * as acorn from 'acorn';
 import * as walk from 'acorn-walk';
 import * as escodegen from 'escodegen';
-import { execSync } from 'child_process';
+import { createHash } from 'crypto';
 
 // Get the current directory
 const __filename = fileURLToPath(import.meta.url);
@@ -39,14 +39,15 @@ async function calculateFileHash(filePath) {
 }
 
 /**
- * Creates a flattened path with underscores
- * @param {string} filePath - Original file path
- * @param {string} baseDir - Base directory to create relative path from
- * @returns {string} - Flattened path
+ * Ensures a directory exists, creating it if necessary
+ * @param {string} dir - Directory path
  */
-function flattenPath(filePath, baseDir) {
-  const relativePath = path.relative(baseDir, filePath);
-  return relativePath.replace(/\//g, '_').replace(/\\/g, '_');
+async function ensureDirectoryExists(dir) {
+  try {
+    await fs.access(dir);
+  } catch (error) {
+    await fs.mkdir(dir, { recursive: true });
+  }
 }
 
 /**
@@ -105,33 +106,22 @@ async function findJsFiles() {
 }
 
 /**
- * Ensures a directory exists, creating it if necessary
- * @param {string} dir - Directory path
+ * Minifies CSS content
+ * @param {string} cssContent - CSS content to minify
+ * @returns {string} - Minified CSS content
  */
-async function ensureDirectoryExists(dir) {
-  try {
-    await fs.access(dir);
-  } catch (error) {
-    await fs.mkdir(dir, { recursive: true });
-  }
+function minifyCss(cssContent) {
+  // Basic CSS minification
+  return cssContent
+    .replace(/\/\*[\s\S]*?\*\//g, '') // Remove comments
+    .replace(/\s+/g, ' ')             // Collapse whitespace
+    .replace(/\s*([{}:;,])\s*/g, '$1')// Remove spaces around punctuation
+    .replace(/;\}/g, '}')             // Remove trailing semicolons
+    .trim();
 }
 
 /**
- * Minifies a CSS file using lightningcss
- * @param {string} inputPath - Path to input CSS file
- * @param {string} outputPath - Path to output CSS file
- */
-function minifyCssFile(inputPath, outputPath) {
-  try {
-    execSync(`npx lightningcss --minify --targets '>= 0.25%' "${inputPath}" -o "${outputPath}"`);
-    console.log(`  Minified: ${path.basename(outputPath)}`);
-  } catch (error) {
-    console.error(`  Error minifying ${inputPath}:`, error.message);
-  }
-}
-
-/**
- * Processes CSS files: hashes, copies, minifies, and renames them
+ * Processes CSS files: hashes, copies, and renames them
  * @returns {Promise<Object>} - Mapping from original paths to new paths
  */
 async function processCssFiles() {
@@ -144,33 +134,48 @@ async function processCssFiles() {
   await ensureDirectoryExists(config.cssOutputDir);
   await ensureDirectoryExists(config.publicCssDir);
   
+  // Create a set to track used hashes to avoid collisions
+  const usedHashes = new Set();
+  
   for (const cssFile of cssFiles) {
-    const hash = await calculateFileHash(cssFile);
-    const baseDir = config.cssSourceDirs.find(dir => cssFile.startsWith(dir));
-    if (!baseDir) continue;
+    // Read the file content
+    const cssContent = await fs.readFile(cssFile, 'utf8');
     
-    const flattenedName = flattenPath(cssFile, baseDir);
-    const extname = path.extname(flattenedName);
-    const basename = path.basename(flattenedName, extname);
-    const newFileName = `${basename}.${hash}${extname}`;
+    // Minify the CSS content
+    const minifiedCss = minifyCss(cssContent);
     
-    // Create a temporary file for minification
-    const tempOutputPath = path.join(config.cssOutputDir, `temp_${newFileName}`);
+    // Calculate hash based on the minified content
+    const hash = createHash('sha1')
+      .update(minifiedCss)
+      .digest('hex')
+      .substring(0, config.hashLength);
     
-    // Copy to temp file
-    await fs.copyFile(cssFile, tempOutputPath);
+    // Ensure hash uniqueness by adding a counter if needed
+    let uniqueHash = hash;
+    let counter = 0;
+    while (usedHashes.has(uniqueHash)) {
+      counter++;
+      uniqueHash = hash.substring(0, config.hashLength - counter.toString().length) + counter;
+    }
+    usedHashes.add(uniqueHash);
     
-    // Minify the CSS file
+    // Create new filename with just the hash
+    const newFileName = `${uniqueHash}.css`;
+    
+    // Copy to assets/css/ (for build)
     const outputPath = path.join(config.cssOutputDir, newFileName);
-    minifyCssFile(tempOutputPath, outputPath);
-    
-    // Remove temp file
-    await fs.unlink(tempOutputPath);
+    await fs.writeFile(outputPath, minifiedCss);
+    console.log(`  Minified: ${newFileName}`);
     
     // Also copy to public/assets/css/ (for development)
     const publicOutputPath = path.join(config.publicCssDir, newFileName);
-    await fs.copyFile(outputPath, publicOutputPath);
+    await fs.writeFile(publicOutputPath, minifiedCss);
     
+    // Determine the base directory this file belongs to
+    const baseDir = config.cssSourceDirs.find(dir => cssFile.startsWith(dir));
+    if (!baseDir) continue;
+    
+    // Create the mapping entry
     const originalRelativePath = path.relative(path.join(baseDir, '..'), cssFile).replace(/\\/g, '/');
     const newRelativePath = newFileName;
     
