@@ -23,7 +23,9 @@ const config = {
   jsSourceDirs: [
     path.join(projectRoot, 'assets/js/pages')
   ],
-  hashLength: 8
+  hashLength: 8,
+  // Add public directory for copying to ensure files are available during development
+  publicCssDir: path.join(projectRoot, 'public/assets/css')
 };
 
 /**
@@ -103,6 +105,18 @@ async function findJsFiles() {
 }
 
 /**
+ * Ensures a directory exists, creating it if necessary
+ * @param {string} dir - Directory path
+ */
+async function ensureDirectoryExists(dir) {
+  try {
+    await fs.access(dir);
+  } catch (error) {
+    await fs.mkdir(dir, { recursive: true });
+  }
+}
+
+/**
  * Processes CSS files: hashes, copies, and renames them
  * @returns {Promise<Object>} - Mapping from original paths to new paths
  */
@@ -111,6 +125,10 @@ async function processCssFiles() {
   const cssMapping = {};
   
   console.log(`Found ${cssFiles.length} CSS files to process`);
+  
+  // Ensure output directories exist
+  await ensureDirectoryExists(config.cssOutputDir);
+  await ensureDirectoryExists(config.publicCssDir);
   
   for (const cssFile of cssFiles) {
     const hash = await calculateFileHash(cssFile);
@@ -121,9 +139,14 @@ async function processCssFiles() {
     const extname = path.extname(flattenedName);
     const basename = path.basename(flattenedName, extname);
     const newFileName = `${basename}.${hash}${extname}`;
-    const outputPath = path.join(config.cssOutputDir, newFileName);
     
+    // Copy to assets/css/ (for build)
+    const outputPath = path.join(config.cssOutputDir, newFileName);
     await fs.copyFile(cssFile, outputPath);
+    
+    // Also copy to public/assets/css/ (for development)
+    const publicOutputPath = path.join(config.publicCssDir, newFileName);
+    await fs.copyFile(cssFile, publicOutputPath);
     
     const originalRelativePath = path.relative(path.join(baseDir, '..'), cssFile).replace(/\\/g, '/');
     const newRelativePath = newFileName;

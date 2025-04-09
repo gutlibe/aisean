@@ -1,6 +1,21 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
 import stylelint from 'vite-plugin-stylelint';
+import fs from 'fs';
+
+// Check if css-mapping.json exists
+let cssMapping = {};
+try {
+  const mappingPath = resolve(__dirname, 'css-mapping.json');
+  if (fs.existsSync(mappingPath)) {
+    cssMapping = JSON.parse(fs.readFileSync(mappingPath, 'utf8'));
+  }
+} catch (error) {
+  console.warn('Could not load CSS mapping:', error);
+}
+
+// Create a set of hashed filenames for quick lookup
+const hashedCssFiles = new Set(Object.values(cssMapping));
 
 export default defineConfig({
   root: '.',
@@ -37,12 +52,12 @@ export default defineConfig({
         
         assetFileNames: (assetInfo) => {
           if (assetInfo.name && assetInfo.name.endsWith('.css')) {
-            // Pre-hashed CSS files (from our script)
-            if (/\.[a-f0-9]{8}\.css$/.test(assetInfo.name)) {
+            // Check if this is one of our pre-hashed CSS files
+            if (hashedCssFiles.has(assetInfo.name)) {
               return 'assets/css/[name]';
             }
             
-            // Core CSS files that shouldn't be hashed
+            // For core CSS files that shouldn't be hashed
             if (/^(base|theme|loader|page)\.css$/.test(assetInfo.name)) {
               return 'assets/css/[name]';
             }
