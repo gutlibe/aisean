@@ -1,53 +1,33 @@
-// Import the base Page class
 import { Page } from "../../../core/page.js"
 
 /**
  * HelpPage - Help and support page for AIsean application
- *
- * Features:
- * - Accordion-style help topics
- * - Feedback submission form with Telegram integration
- * - Contact information
  */
 export class HelpPage extends Page {
-  // Telegram configuration - easily configurable for future database integration
   TELEGRAM_BOT_TOKEN = "7579270762:AAHAtvBT2VrmuyAy0paYZv02y1nwuxg0hgM"
   TELEGRAM_CHAT_ID = "8070411940"
 
   constructor() {
-    super() // Always call the parent constructor
+    super()
 
-    // Basic configuration
     this.showMenuIcon = true
     this.showBackArrow = false
     this.requiresDatabase = false
-
-    // Authentication settings
-    this.requiresAuth = false // Help page should be accessible to all users
+    this.requiresAuth = false
     
-     this.cssFiles = [
+    this.cssFiles = [
       "pages/public/help/index.css",
     ]
- 
   }
 
-  /**
-   * Return the page title shown in the header
-   */
   getTitle() {
     return "Help & Support"
   }
 
-  /**
-   * Return the icon class to display next to the page title
-   */
   getHeaderIcon() {
     return "fas fa-question-circle"
   }
 
-  /**
-   * Return skeleton template HTML shown during initial loading
-   */
   getSkeletonTemplate() {
     return `
             <div class="hp-skeleton-container">
@@ -59,18 +39,13 @@ export class HelpPage extends Page {
         `
   }
 
-  /**
-   * Return the main page content HTML
-   */
   async getContent() {
     return `
             <div class="hp-container">
                 <div class="hp-section">
                     <h2 class="hp-section-title">Frequently Asked Questions</h2>
                     
-                    <!-- Accordion for help topics -->
                     <div class="hp-accordion">
-                        <!-- Subscription and Account Issues -->
                         <div class="hp-accordion-item">
                             <div class="hp-accordion-header" data-accordion="subscription">
                                 <h3>Subscription & Account Issues</h3>
@@ -96,7 +71,6 @@ export class HelpPage extends Page {
                             </div>
                         </div>
                         
-                        <!-- Technical Issues -->
                         <div class="hp-accordion-item">
                             <div class="hp-accordion-header" data-accordion="technical">
                                 <h3>Technical Issues</h3>
@@ -130,7 +104,6 @@ export class HelpPage extends Page {
                             </div>
                         </div>
                         
-                        <!-- App Features -->
                         <div class="hp-accordion-item">
                             <div class="hp-accordion-header" data-accordion="features">
                                 <h3>App Features</h3>
@@ -154,7 +127,6 @@ export class HelpPage extends Page {
                     </div>
                 </div>
                 
-                <!-- Feedback Form -->
                 <div class="hp-section">
                     <h2 class="hp-section-title">Send Us Feedback</h2>
                     <p class="hp-section-description">Have a suggestion or found an issue? Let us know!</p>
@@ -192,7 +164,6 @@ export class HelpPage extends Page {
                     </form>
                 </div>
                 
-                <!-- Contact Information -->
                 <div class="hp-section">
                     <h2 class="hp-section-title">Contact Us</h2>
                     <div class="hp-contact-info">
@@ -216,32 +187,22 @@ export class HelpPage extends Page {
         `
   }
 
-  /**
-   * Called after content is fully rendered
-   * Use for setting up event listeners on content elements
-   */
   async afterContentRender() {
-    // Setup accordion functionality
     const accordionHeaders = this.container.querySelectorAll(".hp-accordion-header")
     accordionHeaders.forEach((header) => {
       header.addEventListener("click", () => this.toggleAccordion(header))
     })
 
-    // Setup feedback form submission
     const feedbackForm = this.container.querySelector("#hp-feedback-form")
     if (feedbackForm) {
       feedbackForm.addEventListener("submit", (e) => this.handleFeedbackSubmit(e))
     }
   }
 
-  /**
-   * Toggle accordion open/closed state
-   */
   toggleAccordion(header) {
     const accordionItem = header.parentElement
     const isOpen = accordionItem.classList.contains("hp-open")
 
-    // Close all accordions first
     const allAccordionItems = this.container.querySelectorAll(".hp-accordion-item")
     allAccordionItems.forEach((item) => {
       item.classList.remove("hp-open")
@@ -249,7 +210,6 @@ export class HelpPage extends Page {
       if (icon) icon.className = "fas fa-chevron-down"
     })
 
-    // If the clicked accordion wasn't open, open it
     if (!isOpen) {
       accordionItem.classList.add("hp-open")
       const icon = header.querySelector("i")
@@ -257,9 +217,6 @@ export class HelpPage extends Page {
     }
   }
 
-  /**
-   * Handle feedback form submission
-   */
   async handleFeedbackSubmit(e) {
     e.preventDefault()
 
@@ -268,13 +225,11 @@ export class HelpPage extends Page {
     const typeInput = this.container.querySelector("#feedback-type")
     const messageInput = this.container.querySelector("#feedback-message")
 
-    // Validate form
     if (!nameInput.value || !emailInput.value || !typeInput.value || !messageInput.value) {
       window.app.showToast("Please fill in all required fields", "error")
       return
     }
 
-    // Prepare feedback data
     const feedbackData = {
       name: nameInput.value,
       email: emailInput.value,
@@ -285,40 +240,30 @@ export class HelpPage extends Page {
     }
 
     try {
-      // Show loading state
       const submitBtn = this.container.querySelector(".hp-submit-btn")
       const originalBtnText = submitBtn.innerHTML
       submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...'
       submitBtn.disabled = true
 
-      // Send feedback to Telegram
       await this.sendFeedbackToTelegram(feedbackData)
 
-      // Reset form
       e.target.reset()
 
-      // Show success message
       window.app.showToast("Thank you for your feedback!", "success")
 
-      // Reset button
       submitBtn.innerHTML = originalBtnText
       submitBtn.disabled = false
     } catch (error) {
       console.error("Error sending feedback:", error)
       window.app.showToast("Failed to send feedback. Please try again later.", "error")
 
-      // Reset button
       const submitBtn = this.container.querySelector(".hp-submit-btn")
       submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Feedback'
       submitBtn.disabled = false
     }
   }
 
-  /**
-   * Send feedback to Telegram chat
-   */
   async sendFeedbackToTelegram(feedbackData) {
-    // Format message for Telegram
     const message = `
 📬 New Feedback Received
 
@@ -332,7 +277,6 @@ export class HelpPage extends Page {
 ${feedbackData.message}
 `
 
-    // Send to Telegram
     const telegramUrl = `https://api.telegram.org/bot${this.TELEGRAM_BOT_TOKEN}/sendMessage`
     const response = await fetch(telegramUrl, {
       method: "POST",
@@ -354,16 +298,8 @@ ${feedbackData.message}
     return await response.json()
   }
 
-  /**
-   * Clean up resources when navigating away from page
-   */
   destroy() {
-    // Always call parent method first to handle base cleanup
     super.destroy()
-
-    // Clear references to DOM elements
     this.container = null
   }
 }
-
-
