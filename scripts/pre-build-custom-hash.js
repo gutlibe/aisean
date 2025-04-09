@@ -7,24 +7,45 @@ import { dirname } from 'path';
 import * as acorn from 'acorn';
 import * as walk from 'acorn-walk';
 import * as escodegen from 'escodegen';
+import { execSync } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..');
 
 const config = {
+  // Main app CSS
   coreCssDir: path.join(projectRoot, 'assets/css'),
   coreCssFiles: ['base', 'theme', 'loader', 'page', 'menu'],
   cssSourceDirs: [
     path.join(projectRoot, 'assets/css/pages')
   ],
   cssOutputDir: path.join(projectRoot, 'assets/css'),
+  
+  // Login CSS
+  loginCssDir: path.join(projectRoot, 'login/assets/css'),
+  loginJsDir: path.join(projectRoot, 'login/assets/js'),
+  loginOutputCssDir: path.join(projectRoot, 'login/assets/css'),
+  loginOutputJsDir: path.join(projectRoot, 'login/assets/js'),
+  
+  // JS files to update
   jsSourceDirs: [
     path.join(projectRoot, 'assets/js/pages')
   ],
+  
+  // CSS Manager file to update
   cssManagerFile: path.join(projectRoot, 'assets/js/chunks/css-manager.js'),
+  
+  // Login HTML files that might reference CSS/JS
+  loginHtmlFiles: [
+    path.join(projectRoot, 'login/index.html'),
+    path.join(projectRoot, 'login/reset.html'),
+    path.join(projectRoot, 'login/register.html')
+  ],
+  
   hashLength: 16,
-  publicCssDir: path.join(projectRoot, 'public/assets/css')
+  publicCssDir: path.join(projectRoot, 'public/assets/css'),
+  publicLoginDir: path.join(projectRoot, 'public/login')
 };
 
 async function calculateFileHash(filePath) {
@@ -67,6 +88,42 @@ async function findCssFiles() {
   }
   
   return cssFiles;
+}
+
+async function findLoginCssFiles() {
+  const cssFiles = [];
+  
+  try {
+    const entries = await fs.readdir(config.loginCssDir, { withFileTypes: true });
+    
+    for (const entry of entries) {
+      if (!entry.isDirectory() && entry.name.endsWith('.css')) {
+        cssFiles.push(path.join(config.loginCssDir, entry.name));
+      }
+    }
+  } catch (error) {
+    console.error(`Error reading login CSS directory: ${error}`);
+  }
+  
+  return cssFiles;
+}
+
+async function findLoginJsFiles() {
+  const jsFiles = [];
+  
+  try {
+    const entries = await fs.readdir(config.loginJsDir, { withFileTypes: true });
+    
+    for (const entry of entries) {
+      if (!entry.isDirectory() && entry.name.endsWith('.js')) {
+        jsFiles.push(path.join(config.loginJsDir, entry.name));
+      }
+    }
+  } catch (error) {
+    console.error(`Error reading login JS directory: ${error}`);
+  }
+  
+  return jsFiles;
 }
 
 async function findJsFiles() {
@@ -156,6 +213,52 @@ async function processCssFiles() {
   return cssMapping;
 }
 
+async function processLoginCssFiles() {
+  const cssFiles = await findLoginCssFiles();
+  const cssMapping = {};
+  
+  console.log(`Found ${cssFiles.length} login CSS files to process`);
+  
+  await ensureDirectoryExists(config.loginOutputCssDir);
+  
+  for (const cssFile of cssFiles) {
+    const originalName = path.basename(cssFile);
+    const hash = await calculateFileHash(cssFile);
+    const newFileName = `${hash}.css`;
+    
+    const outputPath = path.join(config.loginOutputCssDir, newFileName);
+    await fs.copyFile(cssFile, outputPath);
+    
+    cssMapping[originalName] = newFileName;
+    console.log(`Processed login CSS: ${originalName} -> ${newFileName}`);
+  }
+  
+  return cssMapping;
+}
+
+async function processLoginJsFiles() {
+  const jsFiles = await findLoginJsFiles();
+  const jsMapping = {};
+  
+  console.log(`Found ${jsFiles.length} login JS files to process`);
+  
+  await ensureDirectoryExists(config.loginOutputJsDir);
+  
+  for (const jsFile of jsFiles) {
+    const originalName = path.basename(jsFile);
+    const hash = await calculateFileHash(jsFile);
+    const newFileName = `${hash}.js`;
+    
+    const outputPath = path.join(config.loginOutputJsDir, newFileName);
+    await fs.copyFile(jsFile, outputPath);
+    
+    jsMapping[originalName] = newFileName;
+    console.log(`Processed login JS: ${originalName} -> ${newFileName}`);
+  }
+  
+  return jsMapping;
+}
+
 async function updateJsFiles(cssMapping) {
   const jsFiles = await findJsFiles();
   let updatedCount = 0;
@@ -220,6 +323,50 @@ async function updateJsFiles(cssMapping) {
   }
   
   console.log(`Updated ${updatedCount} JS files with new CSS paths`);
+  return updatedCount;
+}
+
+async function updateLoginHtmlFiles(cssMapping, jsMapping) {
+  let updatedCount = 0;
+  
+  for (const htmlFile of config.loginHtmlFiles) {
+    try {
+      await fs.access(htmlFile);
+      
+      let content = await fs.readFile(htmlFile, 'utf8');
+      let modified = false;
+      
+      // Update CSS references
+      for (const [originalName, newName] of Object.entries(cssMapping)) {
+        const cssPattern = new RegExp(`(href=["'])assets/css/${originalName}(["'])`, 'g');
+        if (cssPattern.test(content)) {
+          content = content.replace(cssPattern, `$1assets/css/${newName}$2`);
+          modified = true;
+          console.log(`  In ${path.basename(htmlFile)}: CSS "${originalName}" → "${newName}"`);
+        }
+      }
+      
+      // Update JS references
+      for (const [originalName, newName] of Object.entries(jsMapping)) {
+        const jsPattern = new RegExp(`(src=["'])assets/js/${originalName}(["'])`, 'g');
+        if (jsPattern.test(content)) {
+          content = content.replace(jsPattern, `$1assets/js/${newName}$2`);
+          modified = true;
+          console.log(`  In ${path.basename(htmlFile)}: JS "${originalName}" → "${newName}"`);
+        }
+      }
+      
+      if (modified) {
+        await fs.writeFile(htmlFile, content, 'utf8');
+        updatedCount++;
+        console.log(`Updated HTML file: ${htmlFile}`);
+      }
+    } catch (error) {
+      console.error(`Error processing HTML file ${htmlFile}:`, error);
+    }
+  }
+  
+  console.log(`Updated ${updatedCount} login HTML files`);
   return updatedCount;
 }
 
@@ -349,25 +496,137 @@ async function cleanOriginalCssFiles() {
   }
 }
 
-async function main() {
-  console.log('Starting pre-build CSS hashing process...');
+async function cleanOriginalLoginFiles() {
+  console.log('Cleaning original login CSS and JS files...');
   
   try {
+    // Get list of all CSS files in login directory
+    const cssFiles = await findLoginCssFiles();
+    for (const cssFile of cssFiles) {
+      const fileName = path.basename(cssFile);
+      if (!/^[a-f0-9]{16}\.css$/.test(fileName)) {
+        try {
+          await fs.unlink(cssFile);
+          console.log(`Removed original login CSS file: ${fileName}`);
+        } catch (error) {
+          console.error(`Error removing file ${cssFile}:`, error);
+        }
+      }
+    }
+    
+    // Get list of all JS files in login directory
+    const jsFiles = await findLoginJsFiles();
+    for (const jsFile of jsFiles) {
+      const fileName = path.basename(jsFile);
+      if (!/^[a-f0-9]{16}\.js$/.test(fileName)) {
+        try {
+          await fs.unlink(jsFile);
+          console.log(`Removed original login JS file: ${fileName}`);
+        } catch (error) {
+          console.error(`Error removing file ${jsFile}:`, error);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error cleaning original login files:', error);
+  }
+}
+
+async function minifyLoginCssFiles() {
+  console.log('Minifying login CSS files...');
+  
+  try {
+    const cssDir = config.loginOutputCssDir;
+    const entries = await fs.readdir(cssDir, { withFileTypes: true });
+    
+    for (const entry of entries) {
+      if (!entry.isDirectory() && entry.name.endsWith('.css') && /^[a-f0-9]{16}\.css$/.test(entry.name)) {
+        const cssFile = path.join(cssDir, entry.name);
+        
+        try {
+          // Use lightningcss to minify the file in place
+          const command = `npx lightningcss --minify --targets '>= 0.25%' "${cssFile}" -o "${cssFile}"`;
+          execSync(command, { stdio: 'inherit' });
+          console.log(`Minified login CSS file: ${entry.name}`);
+        } catch (error) {
+          console.error(`Error minifying CSS file ${cssFile}:`, error);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error minifying login CSS files:', error);
+  }
+}
+
+async function minifyLoginJsFiles() {
+  console.log('Minifying login JS files...');
+  
+  try {
+    const jsDir = config.loginOutputJsDir;
+    const entries = await fs.readdir(jsDir, { withFileTypes: true });
+    
+    for (const entry of entries) {
+      if (!entry.isDirectory() && entry.name.endsWith('.js') && /^[a-f0-9]{16}\.js$/.test(entry.name)) {
+        const jsFile = path.join(jsDir, entry.name);
+        
+        try {
+          // Use terser to minify the file in place
+          const command = `npx terser "${jsFile}" --compress --mangle --output "${jsFile}"`;
+          execSync(command, { stdio: 'inherit' });
+          console.log(`Minified login JS file: ${entry.name}`);
+        } catch (error) {
+          console.error(`Error minifying JS file ${jsFile}:`, error);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error minifying login JS files:', error);
+  }
+}
+
+async function main() {
+  console.log('Starting pre-build CSS and JS hashing process...');
+  
+  try {
+    // Process main app CSS
     const coreCssMapping = await processCoreCssFiles();
     const cssMapping = await processCssFiles();
     const combinedMapping = { ...coreCssMapping, ...cssMapping };
     
+    // Process login CSS and JS
+    const loginCssMapping = await processLoginCssFiles();
+    const loginJsMapping = await processLoginJsFiles();
+    
+    // Update references
     await updateJsFiles(combinedMapping);
     await updateCssManager(coreCssMapping, cssMapping);
-    await cleanOriginalCssFiles();
+    await updateLoginHtmlFiles(loginCssMapping, loginJsMapping);
     
+    // Minify login files
+    await minifyLoginCssFiles();
+    await minifyLoginJsFiles();
+    
+    // Clean up original files
+    await cleanOriginalCssFiles();
+    await cleanOriginalLoginFiles();
+    
+    // Save mappings for reference
     await fs.writeFile(
       path.join(projectRoot, 'css-mapping.json'), 
       JSON.stringify(combinedMapping, null, 2), 
       'utf8'
     );
     
-    console.log('Pre-build CSS hashing completed successfully!');
+    await fs.writeFile(
+      path.join(projectRoot, 'login-mapping.json'), 
+      JSON.stringify({
+        css: loginCssMapping,
+        js: loginJsMapping
+      }, null, 2), 
+      'utf8'
+    );
+    
+    console.log('Pre-build CSS and JS hashing completed successfully!');
   } catch (error) {
     console.error('Error during pre-build process:', error);
     process.exit(1);
