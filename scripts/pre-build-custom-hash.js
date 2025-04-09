@@ -13,31 +13,23 @@ const __dirname = dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..');
 
 const config = {
-  // Core CSS files in the root directory (now including menu)
   coreCssDir: path.join(projectRoot, 'assets/css'),
   coreCssFiles: ['base', 'theme', 'loader', 'page', 'menu'],
-  
-  // Page-specific CSS (no more components)
   cssSourceDirs: [
     path.join(projectRoot, 'assets/css/pages')
   ],
   cssOutputDir: path.join(projectRoot, 'assets/css'),
-  
-  // JS files to update
   jsSourceDirs: [
     path.join(projectRoot, 'assets/js/pages')
   ],
-  
-  // CSS Manager file to update
   cssManagerFile: path.join(projectRoot, 'assets/js/chunks/css-manager.js'),
-  
-  hashLength: 8,
+  hashLength: 16,
   publicCssDir: path.join(projectRoot, 'public/assets/css')
 };
 
 async function calculateFileHash(filePath) {
   const fileContent = await fs.readFile(filePath);
-  return crypto.createHash('sha1').update(fileContent).digest('hex').substring(0, config.hashLength);
+  return crypto.createHash('sha256').update(fileContent).digest('hex').substring(0, config.hashLength);
 }
 
 function flattenPath(filePath, baseDir) {
@@ -114,7 +106,7 @@ async function processCoreCssFiles() {
       await fs.access(cssFile);
       
       const hash = await calculateFileHash(cssFile);
-      const newFileName = `${baseName}.${hash}.css`;
+      const newFileName = `${hash}.css`;
       
       const outputPath = path.join(config.cssOutputDir, newFileName);
       await fs.copyFile(cssFile, outputPath);
@@ -146,10 +138,7 @@ async function processCssFiles() {
     const baseDir = config.cssSourceDirs.find(dir => cssFile.startsWith(dir));
     if (!baseDir) continue;
     
-    const flattenedName = flattenPath(cssFile, baseDir);
-    const extname = path.extname(flattenedName);
-    const basename = path.basename(flattenedName, extname);
-    const newFileName = `${basename}.${hash}${extname}`;
+    const newFileName = `${hash}.css`;
     
     const outputPath = path.join(config.cssOutputDir, newFileName);
     await fs.copyFile(cssFile, outputPath);
@@ -262,7 +251,6 @@ async function updateCssManager(coreCssMapping, cssMapping) {
         if (isCssConfigObject) {
           node.properties.forEach(prop => {
             if (prop.key && prop.key.type === 'Identifier') {
-              // Update core CSS files array (now including menu)
               if (prop.key.name === 'core' && prop.value.type === 'ArrayExpression') {
                 prop.value.elements.forEach((element, index) => {
                   if (element.type === 'Literal' && typeof element.value === 'string') {
@@ -279,12 +267,9 @@ async function updateCssManager(coreCssMapping, cssMapping) {
                 });
               }
               
-              // We still check components array for backward compatibility
-              // but we don't expect to find menu there anymore
               if (prop.key.name === 'components' && prop.value.type === 'ArrayExpression') {
                 prop.value.elements.forEach((element, index) => {
                   if (element.type === 'Literal' && typeof element.value === 'string') {
-                    // We're not looking for menu here anymore
                     const componentPath = `pages/${element.value}.css`;
                     const hashedFile = cssMapping[componentPath];
                     
@@ -322,7 +307,6 @@ async function cleanOriginalCssFiles() {
   console.log('Cleaning original CSS files from public directory...');
   
   try {
-    // Clean pages directory
     for (const dir of config.cssSourceDirs) {
       const publicDir = path.join(config.publicCssDir, path.basename(dir));
       
@@ -337,7 +321,6 @@ async function cleanOriginalCssFiles() {
       }
     }
     
-    // Clean original core CSS files
     for (const baseName of config.coreCssFiles) {
       const originalFile = path.join(config.publicCssDir, `${baseName}.css`);
       try {
@@ -351,7 +334,6 @@ async function cleanOriginalCssFiles() {
       }
     }
     
-    // Remove components directory if it exists (should be empty now)
     const componentsDir = path.join(config.publicCssDir, 'components');
     try {
       await fs.access(componentsDir);
