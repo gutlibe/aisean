@@ -4,8 +4,8 @@ class CSSManager {
     this.loadedStyles = new Set()
     this.activePageStyles = new Set() // Track styles for current page
     this.cssConfig = {
-      core: ["base", "theme", "loader", "page"],
-      components: ["menu"],
+      core: ["theme", "loader", "base", "page", "menu"],
+      components: [],
       pages: {},
     }
     // Track initialization state
