@@ -7,7 +7,6 @@ import { dirname } from 'path';
 import * as acorn from 'acorn';
 import * as walk from 'acorn-walk';
 import * as escodegen from 'escodegen';
-import { createHash } from 'crypto';
 
 // Get the current directory
 const __filename = fileURLToPath(import.meta.url);
@@ -16,15 +15,27 @@ const projectRoot = path.resolve(__dirname, '..');
 
 // Configuration
 const config = {
+  // Core CSS files in the root directory
+  coreCssDir: path.join(projectRoot, 'assets/css'),
+  coreCssFiles: ['base', 'theme', 'loader', 'page', 'menu'], // Added menu to core files
+  
+  // Component and page-specific CSS
   cssSourceDirs: [
     path.join(projectRoot, 'assets/css/pages'),
     path.join(projectRoot, 'assets/css/components')
   ],
   cssOutputDir: path.join(projectRoot, 'assets/css'),
+  
+  // JS files to update
   jsSourceDirs: [
     path.join(projectRoot, 'assets/js/pages')
   ],
+  
+  // CSS Manager file to update
+  cssManagerFile: path.join(projectRoot, 'assets/js/chunks/css-manager.js'),
+  
   hashLength: 8,
+  // Public directory for development
   publicCssDir: path.join(projectRoot, 'public/assets/css')
 };
 
@@ -39,15 +50,14 @@ async function calculateFileHash(filePath) {
 }
 
 /**
- * Ensures a directory exists, creating it if necessary
- * @param {string} dir - Directory path
+ * Creates a flattened path with underscores
+ * @param {string} filePath - Original file path
+ * @param {string} baseDir - Base directory to create relative path from
+ * @returns {string} - Flattened path
  */
-async function ensureDirectoryExists(dir) {
-  try {
-    await fs.access(dir);
-  } catch (error) {
-    await fs.mkdir(dir, { recursive: true });
-  }
+function flattenPath(filePath, baseDir) {
+  const relativePath = path.relative(baseDir, filePath);
+  return relativePath.replace(/\//g, '_').replace(/\\/g, '_');
 }
 
 /**
@@ -56,16 +66,20 @@ async function ensureDirectoryExists(dir) {
  * @param {Function} callback - Called for each file found
  */
 async function findFilesRecursively(dir, callback) {
-  const entries = await fs.readdir(dir, { withFileTypes: true });
-  
-  for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name);
+  try {
+    const entries = await fs.readdir(dir, { withFileTypes: true });
     
-    if (entry.isDirectory()) {
-      await findFilesRecursively(fullPath, callback);
-    } else {
-      callback(fullPath);
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+      
+      if (entry.isDirectory()) {
+        await findFilesRecursively(fullPath, callback);
+      } else {
+        callback(fullPath);
+      }
     }
+  } catch (error) {
+    console.error(`Error reading directory ${dir}:`, error);
   }
 }
 
@@ -106,22 +120,60 @@ async function findJsFiles() {
 }
 
 /**
- * Minifies CSS content
- * @param {string} cssContent - CSS content to minify
- * @returns {string} - Minified CSS content
+ * Ensures a directory exists, creating it if necessary
+ * @param {string} dir - Directory path
  */
-function minifyCss(cssContent) {
-  // Basic CSS minification
-  return cssContent
-    .replace(/\/\*[\s\S]*?\*\//g, '') // Remove comments
-    .replace(/\s+/g, ' ')             // Collapse whitespace
-    .replace(/\s*([{}:;,])\s*/g, '$1')// Remove spaces around punctuation
-    .replace(/;\}/g, '}')             // Remove trailing semicolons
-    .trim();
+async function ensureDirectoryExists(dir) {
+  try {
+    await fs.access(dir);
+  } catch (error) {
+    await fs.mkdir(dir, { recursive: true });
+  }
 }
 
 /**
- * Processes CSS files: hashes, copies, and renames them
+ * Processes core CSS files: hashes and copies them
+ * @returns {Promise<Object>} - Mapping from original filenames to hashed filenames
+ */
+async function processCoreCssFiles() {
+  const coreCssMapping = {};
+  
+  console.log(`Processing ${config.coreCssFiles.length} core CSS files`);
+  
+  // Ensure output directories exist
+  await ensureDirectoryExists(config.cssOutputDir);
+  await ensureDirectoryExists(config.publicCssDir);
+  
+  for (const baseName of config.coreCssFiles) {
+    const cssFile = path.join(config.coreCssDir, `${baseName}.css`);
+    
+    try {
+      // Check if file exists
+      await fs.access(cssFile);
+      
+      const hash = await calculateFileHash(cssFile);
+      const newFileName = `${baseName}.${hash}.css`;
+      
+      // Copy to assets/css/ (for build)
+      const outputPath = path.join(config.cssOutputDir, newFileName);
+      await fs.copyFile(cssFile, outputPath);
+      
+      // Also copy to public/assets/css/ (for development)
+      const publicOutputPath = path.join(config.publicCssDir, newFileName);
+      await fs.copyFile(cssFile, publicOutputPath);
+      
+      coreCssMapping[`${baseName}.css`] = newFileName;
+      console.log(`Processed core CSS: ${baseName}.css -> ${newFileName}`);
+    } catch (error) {
+      console.error(`Error processing core CSS file ${cssFile}:`, error);
+    }
+  }
+  
+  return coreCssMapping;
+}
+
+/**
+ * Processes page and component CSS files: hashes, copies, and renames them
  * @returns {Promise<Object>} - Mapping from original paths to new paths
  */
 async function processCssFiles() {
@@ -134,48 +186,24 @@ async function processCssFiles() {
   await ensureDirectoryExists(config.cssOutputDir);
   await ensureDirectoryExists(config.publicCssDir);
   
-  // Create a set to track used hashes to avoid collisions
-  const usedHashes = new Set();
-  
   for (const cssFile of cssFiles) {
-    // Read the file content
-    const cssContent = await fs.readFile(cssFile, 'utf8');
-    
-    // Minify the CSS content
-    const minifiedCss = minifyCss(cssContent);
-    
-    // Calculate hash based on the minified content
-    const hash = createHash('sha1')
-      .update(minifiedCss)
-      .digest('hex')
-      .substring(0, config.hashLength);
-    
-    // Ensure hash uniqueness by adding a counter if needed
-    let uniqueHash = hash;
-    let counter = 0;
-    while (usedHashes.has(uniqueHash)) {
-      counter++;
-      uniqueHash = hash.substring(0, config.hashLength - counter.toString().length) + counter;
-    }
-    usedHashes.add(uniqueHash);
-    
-    // Create new filename with just the hash
-    const newFileName = `${uniqueHash}.css`;
-    
-    // Copy to assets/css/ (for build)
-    const outputPath = path.join(config.cssOutputDir, newFileName);
-    await fs.writeFile(outputPath, minifiedCss);
-    console.log(`  Minified: ${newFileName}`);
-    
-    // Also copy to public/assets/css/ (for development)
-    const publicOutputPath = path.join(config.publicCssDir, newFileName);
-    await fs.writeFile(publicOutputPath, minifiedCss);
-    
-    // Determine the base directory this file belongs to
+    const hash = await calculateFileHash(cssFile);
     const baseDir = config.cssSourceDirs.find(dir => cssFile.startsWith(dir));
     if (!baseDir) continue;
     
-    // Create the mapping entry
+    const flattenedName = flattenPath(cssFile, baseDir);
+    const extname = path.extname(flattenedName);
+    const basename = path.basename(flattenedName, extname);
+    const newFileName = `${basename}.${hash}${extname}`;
+    
+    // Copy to assets/css/ (for build)
+    const outputPath = path.join(config.cssOutputDir, newFileName);
+    await fs.copyFile(cssFile, outputPath);
+    
+    // Also copy to public/assets/css/ (for development)
+    const publicOutputPath = path.join(config.publicCssDir, newFileName);
+    await fs.copyFile(cssFile, publicOutputPath);
+    
     const originalRelativePath = path.relative(path.join(baseDir, '..'), cssFile).replace(/\\/g, '/');
     const newRelativePath = newFileName;
     
@@ -259,18 +287,125 @@ async function updateJsFiles(cssMapping) {
 }
 
 /**
+ * Updates the CSS Manager file with hashed filenames
+ * @param {Object} coreCssMapping - Mapping for core CSS files
+ * @param {Object} cssMapping - Mapping for component and page CSS files
+ * @returns {Promise<boolean>} - Success status
+ */
+async function updateCssManager(coreCssMapping, cssMapping) {
+  try {
+    if (!config.cssManagerFile) {
+      console.log('CSS Manager file not specified, skipping update');
+      return false;
+    }
+    
+    console.log(`Updating CSS Manager: ${config.cssManagerFile}`);
+    
+    const fileContent = await fs.readFile(config.cssManagerFile, 'utf8');
+    
+    // Parse the JS file
+    const ast = acorn.parse(fileContent, { 
+      ecmaVersion: 2020,
+      sourceType: 'module'
+    });
+    
+    let modified = false;
+    
+    // Find the cssConfig object in the constructor
+    walk.simple(ast, {
+      ObjectExpression(node) {
+        // Look for the cssConfig object
+        const isCssConfigObject = node.properties.some(prop => 
+          prop.key && prop.key.type === 'Identifier' && 
+          (prop.key.name === 'core' || prop.key.name === 'components')
+        );
+        
+        if (isCssConfigObject) {
+          // Process each property (core, components, pages)
+          node.properties.forEach(prop => {
+            if (prop.key && prop.key.type === 'Identifier') {
+              // Update core CSS files array
+              if (prop.key.name === 'core' && prop.value.type === 'ArrayExpression') {
+                prop.value.elements.forEach((element, index) => {
+                  if (element.type === 'Literal' && typeof element.value === 'string') {
+                    const cssFile = `${element.value}.css`;
+                    const hashedFile = coreCssMapping[cssFile];
+                    
+                    if (hashedFile) {
+                      // Remove the .css extension for the array
+                      const newValue = hashedFile.replace(/\.css$/, '');
+                      prop.value.elements[index].value = newValue;
+                      modified = true;
+                      console.log(`  Updated core CSS: "${element.value}" → "${newValue}"`);
+                    }
+                  }
+                });
+              }
+              
+              // Update components CSS files array
+              if (prop.key.name === 'components' && prop.value.type === 'ArrayExpression') {
+                prop.value.elements.forEach((element, index) => {
+                  if (element.type === 'Literal' && typeof element.value === 'string') {
+                    const componentPath = `components/${element.value}.css`;
+                    const hashedFile = cssMapping[componentPath];
+                    
+                    if (hashedFile) {
+                      // Remove the .css extension for the array
+                      const newValue = hashedFile.replace(/\.css$/, '');
+                      prop.value.elements[index].value = newValue;
+                      modified = true;
+                      console.log(`  Updated component CSS: "${element.value}" → "${newValue}"`);
+                    }
+                  }
+                });
+              }
+            }
+          });
+        }
+      }
+    });
+    
+    if (modified) {
+      const updatedCode = escodegen.generate(ast);
+      await fs.writeFile(config.cssManagerFile, updatedCode, 'utf8');
+      console.log('CSS Manager updated successfully');
+      return true;
+    } else {
+      console.log('No changes needed in CSS Manager');
+      return false;
+    }
+  } catch (error) {
+    console.error('Error updating CSS Manager:', error);
+    return false;
+  }
+}
+
+/**
  * Main function that orchestrates the pre-build process
  */
 async function main() {
   console.log('Starting pre-build CSS hashing process...');
   
   try {
-    const cssMapping = await processCssFiles();
-    await updateJsFiles(cssMapping);
+    // Process core CSS files first (including menu.css)
+    const coreCssMapping = await processCoreCssFiles();
     
+    // Process component and page CSS files
+    const cssMapping = await processCssFiles();
+    
+    // Combine the mappings
+    const combinedMapping = { ...coreCssMapping, ...cssMapping };
+    
+    // Update JS files with new CSS paths
+    await updateJsFiles(combinedMapping);
+    
+    // Update the CSS Manager file
+    await updateCssManager(coreCssMapping, cssMapping);
+    
+    // Write the mapping to a file for reference
     await fs.writeFile(
       path.join(projectRoot, 'css-mapping.json'), 
-      JSON.stringify(cssMapping, null, 2), 
+      JSON.stringify(combinedMapping, null, 2), 
       'utf8'
     );
     

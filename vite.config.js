@@ -57,8 +57,8 @@ export default defineConfig({
               return 'assets/css/[name]';
             }
             
-            // For core CSS files that shouldn't be hashed
-            if (/^(base|theme|loader|page)\.css$/.test(assetInfo.name)) {
+            // For any CSS files that might have been missed
+            if (/\.[a-f0-9]{8}\.css$/.test(assetInfo.name)) {
               return 'assets/css/[name]';
             }
             
