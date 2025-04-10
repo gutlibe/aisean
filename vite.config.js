@@ -115,5 +115,3 @@ export default defineConfig({
     open: true
   }
 });
-
-console.log("Updated Vite config to create htaccess.txt in build output");
