@@ -38,9 +38,7 @@ const config = {
   
   // Login HTML files that might reference CSS/JS
   loginHtmlFiles: [
-    path.join(projectRoot, 'login/index.html'),
-    path.join(projectRoot, 'login/reset.html'),
-    path.join(projectRoot, 'login/register.html')
+    path.join(projectRoot, 'login/index.html')
   ],
   
   hashLength: 16,
