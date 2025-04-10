@@ -3,44 +3,44 @@ import { resolve } from 'path';
 import stylelint from 'vite-plugin-stylelint';
 import fs from 'fs';
 
-// Improved plugin to copy .htaccess file to build output
-const copyHtaccessPlugin = () => {
+// Simple plugin to create htaccess.txt in the build output
+const createHtaccessTextPlugin = () => {
   return {
-    name: 'copy-htaccess-plugin',
-    // Change from writeBundle to closeBundle hook which runs after all bundles are written
+    name: 'create-htaccess-text-plugin',
     closeBundle() {
       try {
         const htaccessPath = resolve(__dirname, '.htaccess');
-        const destPath = resolve(__dirname, 'dist', '.htaccess');
+        const destPath = resolve(__dirname, 'dist', 'htaccess.txt');
+        
+        // Ensure the destination directory exists
+        if (!fs.existsSync(resolve(__dirname, 'dist'))) {
+          fs.mkdirSync(resolve(__dirname, 'dist'), { recursive: true });
+        }
         
         if (fs.existsSync(htaccessPath)) {
-          // Ensure the destination directory exists
-          if (!fs.existsSync(resolve(__dirname, 'dist'))) {
-            fs.mkdirSync(resolve(__dirname, 'dist'), { recursive: true });
-          }
-          
+          // Copy the .htaccess content to htaccess.txt
           fs.copyFileSync(htaccessPath, destPath);
-          console.log('.htaccess file successfully copied to build output');
+          console.log('htaccess.txt file successfully created in build output');
         } else {
-          console.error('.htaccess file not found in root directory:', htaccessPath);
-          // Try to find the .htaccess file in other common locations
-          const possibleLocations = [
-            resolve(__dirname, 'public', '.htaccess'),
-            resolve(__dirname, 'src', '.htaccess')
-          ];
+          console.warn('.htaccess file not found in root directory');
           
-          for (const location of possibleLocations) {
-            if (fs.existsSync(location)) {
-              fs.copyFileSync(location, destPath);
-              console.log(`.htaccess file found at ${location} and copied to build output`);
-              return;
-            }
-          }
-          
-          console.warn('Could not find .htaccess file in any common locations');
+          // Create a basic htaccess.txt file if the original doesn't exist
+          const basicHtaccess = `# Basic .htaccess file
+# You can edit this file and rename it to .htaccess
+
+# Enable rewrite engine
+RewriteEngine On
+
+# Redirect all requests to index.html except for actual files and directories
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.html [L]
+`;
+          fs.writeFileSync(destPath, basicHtaccess);
+          console.log('Created a basic htaccess.txt file in build output');
         }
       } catch (error) {
-        console.error('Error copying .htaccess file:', error);
+        console.error('Error creating htaccess.txt file:', error);
       }
     }
   };
@@ -67,7 +67,7 @@ export default defineConfig({
       fix: false,
       quiet: false,
     }),
-    copyHtaccessPlugin() // Add the custom plugin
+    createHtaccessTextPlugin() // Add the custom plugin
   ],
   
   build: {
@@ -116,4 +116,4 @@ export default defineConfig({
   }
 });
 
-console.log("Fixed Vite config to properly copy .htaccess file");
+console.log("Updated Vite config to create htaccess.txt in build output");
