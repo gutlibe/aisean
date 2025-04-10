@@ -4,11 +4,12 @@ import { Page } from "../../../core/page.js"
  * HelpPage - Help and support page for AIsean application
  */
 export class HelpPage extends Page {
-  TELEGRAM_BOT_TOKEN = "7579270762:AAHAtvBT2VrmuyAy0paYZv02y1nwuxg0hgM"
-  TELEGRAM_CHAT_ID = "8070411940"
-
   constructor() {
     super()
+
+    // Define properties in constructor instead of using class fields
+    this.TELEGRAM_BOT_TOKEN = "7579270762:AAHAtvBT2VrmuyAy0paYZv02y1nwuxg0hgM"
+    this.TELEGRAM_CHAT_ID = "8070411940"
 
     this.showMenuIcon = true
     this.showBackArrow = false
