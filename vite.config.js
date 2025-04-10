@@ -3,20 +3,41 @@ import { resolve } from 'path';
 import stylelint from 'vite-plugin-stylelint';
 import fs from 'fs';
 
-// Custom plugin to copy .htaccess file to build output
+// Improved plugin to copy .htaccess file to build output
 const copyHtaccessPlugin = () => {
   return {
     name: 'copy-htaccess-plugin',
-    writeBundle() {
+    // Change from writeBundle to closeBundle hook which runs after all bundles are written
+    closeBundle() {
       try {
         const htaccessPath = resolve(__dirname, '.htaccess');
-        const destPath = resolve(__dirname, 'dist/.htaccess');
+        const destPath = resolve(__dirname, 'dist', '.htaccess');
         
         if (fs.existsSync(htaccessPath)) {
+          // Ensure the destination directory exists
+          if (!fs.existsSync(resolve(__dirname, 'dist'))) {
+            fs.mkdirSync(resolve(__dirname, 'dist'), { recursive: true });
+          }
+          
           fs.copyFileSync(htaccessPath, destPath);
           console.log('.htaccess file successfully copied to build output');
         } else {
-          console.warn('.htaccess file not found in root directory');
+          console.error('.htaccess file not found in root directory:', htaccessPath);
+          // Try to find the .htaccess file in other common locations
+          const possibleLocations = [
+            resolve(__dirname, 'public', '.htaccess'),
+            resolve(__dirname, 'src', '.htaccess')
+          ];
+          
+          for (const location of possibleLocations) {
+            if (fs.existsSync(location)) {
+              fs.copyFileSync(location, destPath);
+              console.log(`.htaccess file found at ${location} and copied to build output`);
+              return;
+            }
+          }
+          
+          console.warn('Could not find .htaccess file in any common locations');
         }
       } catch (error) {
         console.error('Error copying .htaccess file:', error);
@@ -94,3 +115,5 @@ export default defineConfig({
     open: true
   }
 });
+
+console.log("Fixed Vite config to properly copy .htaccess file");
