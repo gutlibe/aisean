@@ -3,6 +3,29 @@ import { resolve } from 'path';
 import stylelint from 'vite-plugin-stylelint';
 import fs from 'fs';
 
+// Custom plugin to copy .htaccess file to build output
+const copyHtaccessPlugin = () => {
+  return {
+    name: 'copy-htaccess-plugin',
+    writeBundle() {
+      try {
+        const htaccessPath = resolve(__dirname, '.htaccess');
+        const destPath = resolve(__dirname, 'dist/.htaccess');
+        
+        if (fs.existsSync(htaccessPath)) {
+          fs.copyFileSync(htaccessPath, destPath);
+          console.log('.htaccess file successfully copied to build output');
+        } else {
+          console.warn('.htaccess file not found in root directory');
+        }
+      } catch (error) {
+        console.error('Error copying .htaccess file:', error);
+      }
+    }
+  };
+};
+
+// Load CSS mapping
 let cssMapping = {};
 try {
   const mappingPath = resolve(__dirname, 'css-mapping.json');
@@ -12,7 +35,6 @@ try {
 } catch (error) {
   console.warn('Could not load CSS mapping:', error);
 }
-
 const hashedCssFiles = new Set(Object.values(cssMapping));
 
 export default defineConfig({
@@ -24,6 +46,7 @@ export default defineConfig({
       fix: false,
       quiet: false,
     }),
+    copyHtaccessPlugin() // Add the custom plugin
   ],
   
   build: {
