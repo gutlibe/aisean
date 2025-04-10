@@ -280,23 +280,25 @@ class App {
     await this.maintenanceManager.initialize(this.router, this.menuManager)
   }
 
+
   async initializeSubscriptionManager() {
-    try {
-      // Initialize with 60-minute check interval
-      this.subscriptionManager = await SubscriptionManager.initialize(60)
-
-      // Verify subscriptions immediately
-      const result = await this.subscriptionManager.verifyAllSubscriptions()
-      console.log(
-        `Initial subscription verification: ${result.totalChecked} pro users checked, ${result.expired} expired subscriptions processed.`,
-      )
-
-      return true
-    } catch (error) {
-      console.error("Subscription manager initialization failed:", error)
-      return false
-    }
+  try {
+    // Initialize with 60-minute check interval
+    this.subscriptionManager = await SubscriptionManager.initialize(60);
+    
+    // Verify subscriptions immediately
+    const result = await this.subscriptionManager.verifyAllSubscriptions();
+    console.log(
+      `Initial subscription verification: ${result.totalChecked} pro users checked, ${result.expired} expired subscriptions processed.`,
+    );
+    
+    return true;
+  } catch (error) {
+    console.error("Subscription manager initialization failed:", error);
+    return false;
   }
+}
+
 
   setupGlobalMethods() {
     window.app.addCoreStyle = this.addCoreStyle.bind(this)
@@ -445,15 +447,19 @@ class App {
     }
     return false
   }
+  
+  
 
   async verifyUserSubscription(uid) {
-    if (!this.subscriptionManager) {
-      console.warn("Subscription manager is not initialized")
-      return false
-    }
-
-    return this.subscriptionManager.verifyUserSubscription(uid)
+  if (!this.subscriptionManager) {
+    console.warn("Subscription manager is not initialized");
+    return false;
   }
+  
+  return this.subscriptionManager.verifyUserSubscription(uid);
+}
+
+
 
   async activateMaintenanceMode() {
     if (this.menuManager) {
