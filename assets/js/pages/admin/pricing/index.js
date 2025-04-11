@@ -1,4 +1,4 @@
-import { Page } from '../../../../core/page.js';
+import { Page } from '../../../core/page.js';
 
 /**
  * AdminPricingPage - Page for administrators to manage subscription pricing
