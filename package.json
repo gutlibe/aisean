@@ -1,0 +1,28 @@
+{
+  "scripts": {
+    "dev": "vite",
+    "lint:css": "stylelint \"**/*.css\" --fix",
+    "clean": "rimraf dist",
+    "pre-build:css-hash": "node scripts/pre-build-custom-hash.js",
+    "build:vite": "vite build",
+    "copy:login": "cpy \"login/**\" \"dist/login\"",
+    "obfuscate:alljs": "node scripts/obfuscate-build.js",
+    "build": "npm run clean && npm run lint:css && npm run pre-build:css-hash && npm run build:vite && npm run copy:login && npm run obfuscate:alljs",
+    "preview": "vite preview --outDir dist"
+  },
+  
+  "devDependencies": {
+    "acorn": "^8.10.0",
+    "acorn-walk": "^8.2.0",
+    "cpy-cli": "^5.0.0",
+    "escodegen": "^2.1.0",
+    "javascript-obfuscator": "^4.1.1",
+    "lightningcss-cli": "^1.25.1",
+    "rimraf": "^5.0.7",
+    "stylelint": "^16.6.1",
+    "stylelint-config-standard": "^36.0.0",
+    "terser": "^5.31.1",
+    "vite": "^5.3.1",
+    "vite-plugin-stylelint": "^5.3.1"
+  }
+}
