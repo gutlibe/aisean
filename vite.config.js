@@ -11,19 +11,19 @@ const createHtaccessTextPlugin = () => {
       try {
         const htaccessPath = resolve(__dirname, ".htaccess")
         const destPath = resolve(__dirname, "dist", "htaccess.txt")
-
+        
         // Ensure the destination directory exists
         if (!fs.existsSync(resolve(__dirname, "dist"))) {
           fs.mkdirSync(resolve(__dirname, "dist"), { recursive: true })
         }
-
+        
         if (fs.existsSync(htaccessPath)) {
           // Copy the .htaccess content to htaccess.txt
           fs.copyFileSync(htaccessPath, destPath)
           console.log("htaccess.txt file successfully created in build output")
         } else {
           console.warn(".htaccess file not found in root directory")
-
+          
           // Create a basic htaccess.txt file if the original doesn't exist
           const basicHtaccess = `# Basic .htaccess file
 # You can edit this file and rename it to .htaccess
@@ -54,25 +54,25 @@ const copyImagesPlugin = () => {
       try {
         const sourceImgDir = resolve(__dirname, "assets/img")
         const destImgDir = resolve(__dirname, "dist/assets/img")
-
+        
         // Ensure the destination directory exists
         if (!fs.existsSync(destImgDir)) {
           fs.mkdirSync(destImgDir, { recursive: true })
         }
-
+        
         // Function to copy files recursively
         const copyFilesRecursively = (src, dest) => {
           if (!fs.existsSync(src)) {
             console.warn(`Source directory does not exist: ${src}`)
             return
           }
-
+          
           const entries = fs.readdirSync(src, { withFileTypes: true })
-
+          
           for (const entry of entries) {
             const srcPath = resolve(src, entry.name)
             const destPath = resolve(dest, entry.name)
-
+            
             if (entry.isDirectory()) {
               // Create the directory if it doesn't exist
               if (!fs.existsSync(destPath)) {
@@ -87,7 +87,7 @@ const copyImagesPlugin = () => {
             }
           }
         }
-
+        
         copyFilesRecursively(sourceImgDir, destImgDir)
         console.log("All images copied to build output successfully")
       } catch (error) {
@@ -109,10 +109,13 @@ try {
 }
 const hashedCssFiles = new Set(Object.values(cssMapping))
 
+// Track which images are processed by Vite to avoid duplicate processing
+const processedImages = new Set()
+
 export default defineConfig({
   root: ".",
   publicDir: "public",
-
+  
   plugins: [
     stylelint({
       fix: false,
@@ -120,60 +123,85 @@ export default defineConfig({
     }),
     createHtaccessTextPlugin(),
     copyImagesPlugin(), // Add the custom plugin to copy images
+    // Add a plugin to track which images are being processed by Vite
+    {
+      name: 'track-processed-images',
+      generateBundle(_, bundle) {
+        // Reset the set for each build
+        processedImages.clear()
+        
+        // Track all assets being processed
+        Object.keys(bundle).forEach(fileName => {
+          if (/\.(png|jpe?g|gif|svg|webp|avif|ico)$/i.test(fileName)) {
+            processedImages.add(fileName)
+          }
+        })
+      }
+    }
   ],
-
+  
   build: {
     outDir: "dist",
     sourcemap: false,
     cssCodeSplit: true,
-    assetsInlineLimit: 0,
-
+    assetsInlineLimit: 0, // Don't inline any assets
+    
     minify: "terser",
     terserOptions: {
       compress: { passes: 2 },
       mangle: true,
       format: { comments: false },
     },
-
+    
     rollupOptions: {
       input: {
         main: resolve(__dirname, "index.html"),
       },
-
+      
       output: {
         entryFileNames: "assets/js/[hash:20].js",
         chunkFileNames: "assets/js/[hash:20].js",
-
+        
         assetFileNames: (assetInfo) => {
+          // CSS files handling
           if (assetInfo.name && assetInfo.name.endsWith(".css")) {
             if (hashedCssFiles.has(assetInfo.name)) {
               return "assets/css/[name]"
             }
-
+            
             if (/\.[a-f0-9]{8}\.css$/.test(assetInfo.name)) {
               return "assets/css/[name]"
             }
-
+            
             return "assets/css/[hash:20][extname]"
           }
-
-          // For image files, preserve the original path
+          
+          // Image files handling
           if (assetInfo.name && /\.(png|jpe?g|gif|svg|webp|avif|ico)$/i.test(assetInfo.name)) {
-            // Keep the exact original path for the file
-            const parts = assetInfo.name.split("/")
-            // If it's coming from assets/img directory
-            if (parts.some((part) => part === "img")) {
-              // Preserve the full path
-              return assetInfo.name
+            // Extract the path components
+            const pathParts = assetInfo.name.split('/')
+            
+            // Check if the image is from the assets/img directory
+            const imgIndex = pathParts.indexOf('img')
+            
+            if (imgIndex >= 0 && imgIndex < pathParts.length - 1) {
+              // This is from assets/img or a subdirectory
+              // Keep the structure starting from 'img'
+              const relativePath = pathParts.slice(imgIndex).join('/')
+              return `assets/${relativePath}`
             }
+            
+            // Default case: put images in assets/img to match our copy plugin
+            return "assets/img/[name][extname]"
           }
-
+          
+          // Any other asset
           return "assets/[ext]/[hash:20][extname]"
         },
       },
     },
   },
-
+  
   server: {
     open: true,
   },
