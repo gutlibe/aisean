@@ -157,13 +157,15 @@ export default defineConfig({
             return "assets/css/[hash:20][extname]"
           }
 
-          // Preserve image paths in assets/img
-          if (assetInfo.name && /\.(png|jpe?g|gif|svg|webp|avif)$/.test(assetInfo.name)) {
-            if (assetInfo.name.includes("assets/img/")) {
-              // Keep the original path structure for images in assets/img
-              return "[name]"
+          // For image files, preserve the original path
+          if (assetInfo.name && /\.(png|jpe?g|gif|svg|webp|avif|ico)$/i.test(assetInfo.name)) {
+            // Keep the exact original path for the file
+            const parts = assetInfo.name.split("/")
+            // If it's coming from assets/img directory
+            if (parts.some((part) => part === "img")) {
+              // Preserve the full path
+              return assetInfo.name
             }
-            return "assets/[ext]/[hash:20][extname]"
           }
 
           return "assets/[ext]/[hash:20][extname]"
