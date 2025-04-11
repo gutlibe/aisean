@@ -45,24 +45,24 @@ export class DashboardPage extends Page {
                 color: "var(--warning)"
             },
             {
-                title: "System Settings",
+                title: "Bot Configuration", // Changed title
                 icon: "fas fa-cogs",
                 description: "Configure application settings",
-                route: "/admin/settings",
+                route: "/admin/config", // Changed route
                 color: "var(--primary-hover)"
             },
             {
-                title: "Subscription Plans",
+                title: "Manage Pricing", // Changed title
                 icon: "fas fa-credit-card",
                 description: "Manage subscription tiers and pricing",
-                route: "/admin/subscriptions",
+                route: "/admin/pricing", // Changed route
                 color: "var(--danger)"
             },
             {
-                title: "Help & Support",
+                title: "Help & Support", // Assuming this route exists or will be added
                 icon: "fas fa-headset",
                 description: "Support tickets and user assistance",
-                route: "/admin/support",
+                route: "/admin/support", // Kept route, ensure it exists
                 color: "var(--success)"
             }
         ];
