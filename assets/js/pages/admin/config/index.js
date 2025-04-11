@@ -1,4 +1,4 @@
-import { Page } from '../../../../core/page.js';
+import { Page } from '../../../core/page.js';
 
 /**
  * AdminConfigPage - Page for administrators to manage bot configurations
