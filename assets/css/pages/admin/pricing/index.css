@@ -1,137 +1,416 @@
 /* Admin Pricing Page Styles */
-.ad-prc-container {
-  padding: var(--space-lg);
-  max-width: 800px;
+
+.prc-container {
+  width: 100%;
+  max-width: 1200px;
   margin: 0 auto;
+  padding: 20px;
 }
 
-.ad-prc-title {
-  color: var(--text-color-strong);
-  font-size: var(--font-size-xl);
-  margin-bottom: var(--space-md);
-  border-bottom: 1px solid var(--border-color);
-  padding-bottom: var(--space-sm);
+.prc-header {
+  margin-bottom: 24px;
+}
+
+.prc-header h2 {
+  font-size: 24px;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+
+.prc-header p {
+  color: var(--text-secondary);
+  font-size: 16px;
+}
+
+/* Controls */
+.prc-controls {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 16px;
+}
+
+.prc-search {
+  position: relative;
+  flex: 1;
+}
+
+.prc-search-input {
+  width: 100%;
+  padding: 10px 16px 10px 40px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background-color: var(--card-bg);
+  color: var(--text);
+  font-size: 14px;
+}
+
+.prc-search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-secondary);
+}
+
+.prc-filter-select {
+  padding: 10px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background-color: var(--card-bg);
+  color: var(--text);
+  font-size: 14px;
+  min-width: 150px;
+}
+
+/* Table */
+.prc-table-container {
+  background-color: var(--card-bg);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  margin-bottom: 32px;
+}
+
+.prc-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.prc-table th {
+  background-color: var(--header-bg);
+  color: var(--text);
+  font-weight: 600;
+  text-align: left;
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.prc-table td {
+  padding: 16px;
+  border-bottom: 1px solid var(--divider);
+  color: var(--text);
+}
+
+.prc-table tr:last-child td {
+  border-bottom: none;
+}
+
+.prc-table tbody tr:hover {
+  background-color: var(--menu-hover);
+}
+
+.prc-plan-name {
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.prc-plan-id {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.prc-plan-duration {
+  font-weight: 500;
+}
+
+.prc-plan-price {
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.prc-status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.prc-status-active {
+  background-color: rgba(0, 136, 0, 0.1);
+  color: var(--success);
+}
+
+.prc-status-inactive {
+  background-color: rgba(204, 0, 0, 0.1);
+  color: var(--danger);
+}
+
+.prc-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.prc-btn-edit,
+.prc-btn-toggle,
+.prc-btn-delete {
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
   display: flex;
   align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
 }
 
-.ad-prc-title i {
-  margin-right: var(--space-sm);
-  color: var(--primary-color);
+.prc-btn-edit {
+  color: var(--primary);
 }
 
-.ad-prc-form {
-  background-color: var(--background-card);
-  padding: var(--space-lg);
-  border-radius: var(--border-radius-md);
-  box-shadow: var(--shadow-sm);
+.prc-btn-toggle {
+  color: var(--success);
 }
 
-.ad-prc-form .form-group {
-  margin-bottom: var(--space-md);
+.prc-btn-delete {
+  color: var(--danger);
 }
 
-.ad-prc-form label {
-  display: block;
-  font-weight: var(--font-weight-semibold);
-  margin-bottom: var(--space-xs);
-  color: var(--text-color-medium);
+.prc-btn-edit:hover,
+.prc-btn-toggle:hover,
+.prc-btn-delete:hover {
+  background-color: var(--menu-hover);
 }
 
-.ad-prc-form input[type="number"],
-.ad-prc-form input[type="text"] {
-  width: 100%;
-  padding: var(--space-sm);
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius-sm);
-  background-color: var(--background-input);
-  color: var(--text-color-normal);
-  font-size: var(--font-size-md);
-  box-sizing: border-box; /* Ensure padding doesn't increase size */
+/* Empty state */
+.prc-empty-state {
+  padding: 48px 24px;
+  text-align: center;
 }
 
-.ad-prc-form input[type="number"]:focus,
-.ad-prc-form input[type="text"]:focus {
-  outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px var(--primary-color-light-transparent);
+.prc-empty-icon {
+  font-size: 48px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
 }
 
-.ad-prc-save-button {
-  background-color: var(--primary-color);
-  color: var(--button-text-color);
-  padding: var(--space-sm) var(--space-md);
-  border: none;
-  border-radius: var(--border-radius-sm);
-  font-size: var(--font-size-md);
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-  display: inline-flex;
+.prc-empty-state h3 {
+  font-size: 18px;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+
+.prc-empty-state p {
+  color: var(--text-secondary);
+}
+
+/* Form */
+.prc-form-container {
+  background-color: var(--card-bg);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  margin-bottom: 32px;
+}
+
+.prc-form {
+  padding: 24px;
+}
+
+.prc-form-header {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
+  margin-bottom: 24px;
 }
 
-.ad-prc-save-button i {
-  margin-right: var(--space-xs);
+.prc-form-header h3 {
+  font-size: 18px;
+  color: var(--text);
 }
 
-.ad-prc-save-button:hover {
-  background-color: var(--primary-color-dark);
+.prc-btn-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
 }
 
-.ad-prc-save-button:disabled {
-  background-color: var(--disabled-color);
-  cursor: not-allowed;
+.prc-btn-close:hover {
+  background-color: var(--menu-hover);
 }
 
-/* Skeleton Loader */
-.ad-prc-skeleton-container {
-  padding: var(--space-lg);
+.prc-form-group {
+  margin-bottom: 16px;
 }
 
-.ad-prc-skeleton-title {
-  height: 30px;
-  width: 40%;
-  background-color: var(--skeleton-color);
-  border-radius: var(--border-radius-sm);
-  margin-bottom: var(--space-lg);
-  animation: pulse 1.5s infinite ease-in-out;
+.prc-form-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
-.ad-prc-skeleton-form {
-  background-color: var(--background-card);
-  padding: var(--space-lg);
-  border-radius: var(--border-radius-md);
+.prc-form-row .prc-form-group {
+  flex: 1;
+  margin-bottom: 0;
 }
 
-.ad-prc-skeleton-label {
-  height: 16px;
-  width: 25%;
-  background-color: var(--skeleton-color);
-  border-radius: var(--border-radius-xs);
-  margin-bottom: var(--space-xs);
-  animation: pulse 1.5s infinite ease-in-out;
+.prc-form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: var(--text);
 }
 
-.ad-prc-skeleton-input {
-  height: 40px;
+.prc-form-group input,
+.prc-form-group select,
+.prc-form-group textarea {
   width: 100%;
-  background-color: var(--skeleton-color);
-  border-radius: var(--border-radius-sm);
-  margin-bottom: var(--space-md);
-  animation: pulse 1.5s infinite ease-in-out;
+  padding: 10px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background-color: var(--card-bg);
+  color: var(--text);
+  font-size: 14px;
 }
 
-.ad-prc-skeleton-button {
-  height: 40px;
-  width: 120px;
-  background-color: var(--skeleton-color);
-  border-radius: var(--border-radius-sm);
-  animation: pulse 1.5s infinite ease-in-out;
-  margin-top: var(--space-sm);
+.prc-form-group textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.prc-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.prc-btn-primary,
+.prc-btn-secondary,
+.prc-btn-danger {
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  border: none;
+}
+
+.prc-btn-primary {
+  background-color: var(--primary);
+  color: var(--text-primary);
+}
+
+.prc-btn-primary:hover {
+  background-color: var(--primary-hover);
+}
+
+.prc-btn-secondary {
+  background-color: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.prc-btn-secondary:hover {
+  background-color: var(--menu-hover);
+}
+
+.prc-btn-danger {
+  background-color: var(--danger);
+  color: white;
+}
+
+.prc-btn-danger:hover {
+  background-color: #e60000;
+}
+
+/* Confirmation Dialog */
+.prc-modal-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--overlay);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.prc-confirm-dialog {
+  background-color: var(--card-bg);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  padding: 24px;
+  max-width: 400px;
+  width: 100%;
+}
+
+.prc-confirm-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.prc-confirm-icon {
+  color: var(--warning);
+  font-size: 24px;
+  margin-right: 12px;
+}
+
+.prc-confirm-header h3 {
+  font-size: 18px;
+  color: var(--text);
+}
+
+.prc-confirm-warning {
+  color: var(--danger);
+  margin-top: 8px;
+  font-weight: 500;
+}
+
+.prc-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .prc-controls {
+    flex-direction: column;
+  }
+  
+  .prc-form-row {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .prc-table {
+    display: block;
+    overflow-x: auto;
+  }
+  
+  .prc-table th:nth-child(2),
+  .prc-table td:nth-child(2) {
+    display: none;
+  }
+}
+
+/* Skeleton loading */
+.skeleton-pulse {
+  animation: pulse 1.5s infinite;
+  background: linear-gradient(90deg, var(--menu-hover), var(--menu-active), var(--menu-hover));
+  background-size: 200% 100%;
 }
 
 @keyframes pulse {
-  0% { opacity: 0.6; }
-  50% { opacity: 1; }
-  100% { opacity: 0.6; }
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: -200% 0%;
+  }
 }
