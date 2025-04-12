@@ -25,11 +25,27 @@ export class PricingAdminPage extends Page {
     this.isEditing = false;
     this.currentEditId = null;
     this.listeners = [];
+    this.isSaving = false; // Add flag to track saving state
     
     // CSS files to load
     this.cssFiles = [
       "pages/admin/pricing/index.css",
     ];
+  }
+
+  /**
+   * Escape HTML special characters to prevent XSS
+   * @param {string} str - The string to escape
+   * @returns {string} - The escaped string
+   */
+  escapeHtml(str) {
+    if (!str || typeof str !== 'string') return '';
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   }
 
   /**
@@ -276,7 +292,7 @@ export class PricingAdminPage extends Page {
           
           <div class="prc-form-actions">
             <button type="button" id="cancelFormBtn" class="prc-btn-secondary">Cancel</button>
-            <button type="submit" class="prc-btn-primary">${submitText}</button>
+            <button type="submit" id="submitFormBtn" class="prc-btn-primary">${submitText}</button>
           </div>
         </form>
       </div>
@@ -328,7 +344,7 @@ export class PricingAdminPage extends Page {
       button.addEventListener('click', (e) => {
         const planId = e.currentTarget.dataset.id;
         const isActive = e.currentTarget.dataset.active === 'true';
-        this.togglePlanStatus(planId, !isActive);
+        this.togglePlanStatus(planId, !isActive, e.currentTarget);
       });
     });
     
@@ -495,10 +511,54 @@ export class PricingAdminPage extends Page {
   }
 
   /**
+   * Set button loading state
+   * @param {HTMLElement} button - The button element
+   * @param {boolean} isLoading - Whether to show loading state
+   * @param {string} originalText - The original button text
+   */
+  setButtonLoading(button, isLoading, originalText = null) {
+    if (!button) return;
+    
+    if (isLoading) {
+      // Store original text if not provided
+      if (!originalText) {
+        button.dataset.originalText = button.innerHTML;
+      }
+      
+      // Set loading state
+      button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+      button.disabled = true;
+      button.classList.add('prc-btn-loading');
+    } else {
+      // Restore original text
+      button.innerHTML = originalText || button.dataset.originalText || button.innerHTML;
+      button.disabled = false;
+      button.classList.remove('prc-btn-loading');
+      
+      // Clean up stored text
+      if (button.dataset.originalText) {
+        delete button.dataset.originalText;
+      }
+    }
+  }
+
+  /**
    * Save the pricing plan
    */
   async savePricingPlan() {
+    // Prevent multiple submissions
+    if (this.isSaving) return;
+    
+    // Get the submit button
+    const submitBtn = this.container.querySelector('#submitFormBtn');
+    if (!submitBtn) return;
+    
     try {
+      this.isSaving = true;
+      
+      // Set button to loading state
+      this.setButtonLoading(submitBtn, true);
+      
       const planName = this.container.querySelector('#planName').value.trim();
       const planDuration = parseInt(this.container.querySelector('#planDuration').value, 10);
       const planPrice = parseFloat(this.container.querySelector('#planPrice').value);
@@ -511,16 +571,22 @@ export class PricingAdminPage extends Page {
       // Validate inputs
       if (!planName) {
         window.app.showToast('Plan name is required', 'error');
+        this.setButtonLoading(submitBtn, false);
+        this.isSaving = false;
         return;
       }
       
       if (isNaN(planDuration) || planDuration < 1) {
         window.app.showToast('Duration must be a positive number', 'error');
+        this.setButtonLoading(submitBtn, false);
+        this.isSaving = false;
         return;
       }
       
       if (isNaN(planPrice) || planPrice < 0) {
         window.app.showToast('Price must be a non-negative number', 'error');
+        this.setButtonLoading(submitBtn, false);
+        this.isSaving = false;
         return;
       }
       
@@ -562,14 +628,28 @@ export class PricingAdminPage extends Page {
     } catch (error) {
       console.error('Error saving pricing plan:', error);
       window.app.showToast('Failed to save pricing plan', 'error');
+    } finally {
+      // Reset button state
+      this.setButtonLoading(submitBtn, false);
+      this.isSaving = false;
     }
   }
 
   /**
    * Toggle plan active status
    */
-  async togglePlanStatus(planId, newStatus) {
+  async togglePlanStatus(planId, newStatus, button) {
+    // Get the button if not provided
+    if (!button) {
+      button = this.container.querySelector(`.prc-btn-toggle[data-id="${planId}"]`);
+    }
+    
     try {
+      // Set button to loading state
+      if (button) {
+        this.setButtonLoading(button, true);
+      }
+      
       const firebase = window.app.getLibrary('firebase');
       
       // Create a reference to the plan's active status
@@ -587,6 +667,15 @@ export class PricingAdminPage extends Page {
     } catch (error) {
       console.error('Error toggling plan status:', error);
       window.app.showToast('Failed to update plan status', 'error');
+    } finally {
+      // Reset button state
+      if (button) {
+        const icon = newStatus ? 'fa-toggle-on' : 'fa-toggle-off';
+        this.setButtonLoading(button, false, `<i class="fas ${icon}"></i>`);
+        
+        // Update data attributes
+        button.dataset.active = newStatus.toString();
+      }
     }
   }
 
@@ -637,16 +726,21 @@ export class PricingAdminPage extends Page {
     });
     
     confirmBtn.addEventListener('click', () => {
-      this.deletePlan(planId);
-      modalContainer.style.display = 'none';
+      this.deletePlan(planId, confirmBtn);
+      // Don't hide the modal yet, wait for the deletion to complete
     });
   }
 
   /**
    * Delete a plan
    */
-  async deletePlan(planId) {
+  async deletePlan(planId, button) {
     try {
+      // Set button to loading state
+      if (button) {
+        this.setButtonLoading(button, true);
+      }
+      
       const firebase = window.app.getLibrary('firebase');
       
       // Create a reference to the plan
@@ -658,9 +752,20 @@ export class PricingAdminPage extends Page {
       // Show success message
       window.app.showToast('Plan deleted successfully', 'success');
       
+      // Hide the modal
+      const modalContainer = document.querySelector('.prc-modal-container');
+      if (modalContainer) {
+        modalContainer.style.display = 'none';
+      }
+      
     } catch (error) {
       console.error('Error deleting plan:', error);
       window.app.showToast('Failed to delete plan', 'error');
+      
+      // Reset button state
+      if (button) {
+        this.setButtonLoading(button, false);
+      }
     }
   }
 
