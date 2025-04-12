@@ -49,15 +49,20 @@ export class HelpPage extends Page {
 
             if (snapshot.exists()) {
                 const config = snapshot.val();
-                this.botToken = config.botToken || null; // Load from DB
-                this.chatId = config.chatId || null; // Load from DB
+                // Access telegram configuration correctly based on the database structure
+                if (config.telegram) {
+                    this.botToken = config.telegram.bot_token || null;
+                    this.chatId = config.telegram.chat_id || null;
+                } else {
+                    console.warn('Telegram configuration not found in Firebase Realtime Database');
+                }
             } else {
                 console.warn('No config found in Firebase Realtime Database at /configs');
             }
             return true;
         } catch (error) {
             console.error('Error fetching config from Firebase:', error);
-            window.app.getToastManager().showToast("Failed to load help configuration.", "error");
+            window.app.showToast("Failed to load help configuration.", "error");
             return false;
         }
     }
@@ -249,7 +254,7 @@ export class HelpPage extends Page {
         const messageInput = this.container.querySelector("#feedback-message");
 
         if (!nameInput.value || !emailInput.value || !typeInput.value || !messageInput.value) {
-            window.app.getToastManager().showToast("Please fill in all required fields", "error");
+            window.app.showToast("Please fill in all required fields", "error");
             return;
         }
 
@@ -272,13 +277,13 @@ export class HelpPage extends Page {
 
             e.target.reset();
 
-            window.app.getToastManager().showToast("Thank you for your feedback!", "success");
+            window.app.showToast("Thank you for your feedback!", "success");
 
             submitBtn.innerHTML = originalBtnText;
             submitBtn.disabled = false;
         } catch (error) {
             console.error("Error sending feedback:", error);
-            window.app.getToastManager().showToast("Failed to send feedback. Please try again later.", "error");
+            window.app.showToast("Failed to send feedback. Please try again later.", "error");
 
             const submitBtn = this.container.querySelector(".hp-submit-btn");
             submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Feedback';
@@ -289,7 +294,7 @@ export class HelpPage extends Page {
     async sendFeedbackToTelegram(feedbackData) {
         if (!this.botToken || !this.chatId) {
             console.warn("Bot token or Chat ID not configured.");
-            window.app.getToastManager().showToast("Bot configuration missing. Feedback can't be sent.", "warning");
+            window.app.showToast("Bot configuration missing. Feedback can't be sent.", "warning");
             return;
         }
 

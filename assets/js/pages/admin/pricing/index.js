@@ -12,7 +12,7 @@ export class PricingAdminPage extends Page {
     
     // Basic configuration
     this.showMenuIcon = true;
-    this.showBackArrow = false;
+    this.showBackArrow = true;
     
     // Database configuration
     this.requiresDatabase = true;
@@ -26,6 +26,7 @@ export class PricingAdminPage extends Page {
     this.currentEditId = null;
     this.listeners = [];
     this.isSaving = false; // Add flag to track saving state
+    this.realtimeListenerActive = false; // Flag to track if realtime listener is already active
     
     // CSS files to load
     this.cssFiles = [
@@ -360,8 +361,10 @@ export class PricingAdminPage extends Page {
     // Set up form event listeners if form is visible
     this.setupFormEventListeners();
     
-    // Set up real-time listener for pricing data
-    this.setupRealtimeListener();
+    // Set up real-time listener for pricing data (only if not already active)
+    if (!this.realtimeListenerActive) {
+      this.setupRealtimeListener();
+    }
   }
 
   /**
@@ -395,6 +398,11 @@ export class PricingAdminPage extends Page {
    * Set up real-time listener for pricing data
    */
   setupRealtimeListener() {
+    // If listener is already active, don't set up another one
+    if (this.realtimeListenerActive) {
+      return;
+    }
+    
     const firebase = window.app.getLibrary('firebase');
     
     // Create a reference to the pricing data
@@ -402,32 +410,80 @@ export class PricingAdminPage extends Page {
     
     // Set up a listener for changes
     const unsubscribe = firebase.onValue(pricingRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const pricingData = snapshot.val();
-        this.pricingData = this.convertToArray(pricingData);
-        
-        // Update the table if not currently editing
-        if (!this.isEditing) {
+      try {
+        if (snapshot.exists()) {
+          // Safely extract data from snapshot
+          const pricingData = snapshot.val();
+          
+          // Update the pricing data in memory
+          this.pricingData = this.convertToArray(pricingData);
+          
+          // Update the table if not currently editing
+          if (!this.isEditing) {
+            const tableContainer = this.container.querySelector('.prc-table-container');
+            if (tableContainer) {
+              tableContainer.innerHTML = this.renderPricingTable();
+              
+              // Set up event listeners for the new table content
+              // without recursively calling setupRealtimeListener
+              this.setupTableEventListeners();
+            }
+          }
+        } else {
+          this.pricingData = [];
+          
+          // Update the table to show empty state
           const tableContainer = this.container.querySelector('.prc-table-container');
           if (tableContainer) {
             tableContainer.innerHTML = this.renderPricingTable();
-            this.afterContentRender();
           }
         }
-      } else {
-        this.pricingData = [];
-        
-        // Update the table to show empty state
-        const tableContainer = this.container.querySelector('.prc-table-container');
-        if (tableContainer) {
-          tableContainer.innerHTML = this.renderPricingTable();
-          this.afterContentRender();
-        }
+      } catch (error) {
+        console.error('Error handling pricing data update:', error);
       }
+    }, (error) => {
+      console.error('Firebase onValue error:', error);
     });
     
     // Store the unsubscribe function for cleanup
     this.listeners.push(unsubscribe);
+    
+    // Mark the listener as active
+    this.realtimeListenerActive = true;
+  }
+  
+  /**
+   * Set up event listeners for table elements
+   * This is extracted from afterContentRender to avoid recursive calls
+   */
+  setupTableEventListeners() {
+    // Set up edit buttons
+    const editButtons = this.container.querySelectorAll('.prc-btn-edit');
+    editButtons.forEach(button => {
+      button.addEventListener('click', (e) => {
+        const planId = e.currentTarget.dataset.id;
+        this.showEditPlanForm(planId);
+      });
+    });
+    
+    // Set up toggle buttons
+    const toggleButtons = this.container.querySelectorAll('.prc-btn-toggle');
+    toggleButtons.forEach(button => {
+      button.addEventListener('click', (e) => {
+        const planId = e.currentTarget.dataset.id;
+        const isActive = e.currentTarget.dataset.active === 'true';
+        this.togglePlanStatus(planId, !isActive, e.currentTarget);
+      });
+    });
+    
+    // Set up delete buttons
+    const deleteButtons = this.container.querySelectorAll('.prc-btn-delete');
+    deleteButtons.forEach(button => {
+      button.addEventListener('click', (e) => {
+        const planId = e.currentTarget.dataset.id;
+        this.confirmDeletePlan(planId);
+      });
+    });
   }
 
   /**
@@ -784,6 +840,9 @@ export class PricingAdminPage extends Page {
       });
       this.listeners = [];
     }
+    
+    // Reset listener active flag
+    this.realtimeListenerActive = false;
     
     // Remove modal container if it exists
     const modalContainer = document.querySelector('.prc-modal-container');

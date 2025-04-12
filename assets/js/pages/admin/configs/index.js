@@ -12,7 +12,7 @@ export class ConfigsAdminPage extends Page {
     
     // Basic configuration
     this.showMenuIcon = true;
-    this.showBackArrow = false;
+    this.showBackArrow = true;
     
     // Database configuration
     this.requiresDatabase = true;
