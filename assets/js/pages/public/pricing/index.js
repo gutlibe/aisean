@@ -5,17 +5,17 @@ export class PricingPage extends Page {
     super();
     this.showMenuIcon = false;
     this.showBackArrow = true;
-    this.requiresDatabase = true; 
+    this.requiresDatabase = true;
     this.requiresAuth = false;
     this.authorizedUserTypes = [];
     this.isButtonDisabled = false;
     this.pricingData = null;
     
     this.cssFiles = [
-        "pages/public/pricing/index.css",
+      "pages/public/pricing/index.css",
     ];
   }
-
+  
   /**
    * Escape HTML special characters to prevent XSS
    * @param {string} str - The string to escape
@@ -30,19 +30,19 @@ export class PricingPage extends Page {
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
   }
-
+  
   getTitle() {
     return "Premium Pricing";
   }
-
+  
   getHeaderIcon() {
     return "fas fa-crown";
   }
-
+  
   getActions() {
     return ``;
   }
-
+  
   getSkeletonTemplate() {
     return `
       <div class="pcg-container">
@@ -54,7 +54,7 @@ export class PricingPage extends Page {
       </div>
     `;
   }
-
+  
   getSkeletonCard() {
     return `
       <div class="pcg-card skeleton-card">
@@ -70,7 +70,7 @@ export class PricingPage extends Page {
       </div>
     `;
   }
-
+  
   /**
    * Load pricing data from Realtime Database
    */
@@ -91,39 +91,6 @@ export class PricingPage extends Page {
       } else {
         // Initialize with default values if no data exists
         this.pricingData = [
-          {
-            id: 'monthly',
-            name: 'Monthly Premium',
-            duration: 30,
-            price: 50,
-            active: true,
-            features: [
-              'All Premium Predictions',
-              'Expert Analysis & Tips',
-              'Access to Upcoming Features'
-            ]
-          },
-          {
-            id: 'quarterly',
-            name: 'Quarterly Premium',
-            duration: 90,
-            price: 120,
-            active: true,
-            features: [
-              'All Premium Predictions',
-              'Expert Analysis & Tips',
-              'Access to Upcoming Features',
-              'Priority Customer Support'
-            ]
-          }
-        ];
-      }
-      
-      return true;
-    } catch (error) {
-      console.error('Error loading pricing data:', error);
-      // Fallback to default values if there's an error
-      this.pricingData = [
         {
           id: 'monthly',
           name: 'Monthly Premium',
@@ -148,12 +115,43 @@ export class PricingPage extends Page {
             'Access to Upcoming Features',
             'Priority Customer Support'
           ]
-        }
-      ];
+        }];
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error loading pricing data:', error);
+      // Fallback to default values if there's an error
+      this.pricingData = [
+      {
+        id: 'monthly',
+        name: 'Monthly Premium',
+        duration: 30,
+        price: 50,
+        active: true,
+        features: [
+          'All Premium Predictions',
+          'Expert Analysis & Tips',
+          'Access to Upcoming Features'
+        ]
+      },
+      {
+        id: 'quarterly',
+        name: 'Quarterly Premium',
+        duration: 90,
+        price: 120,
+        active: true,
+        features: [
+          'All Premium Predictions',
+          'Expert Analysis & Tips',
+          'Access to Upcoming Features',
+          'Priority Customer Support'
+        ]
+      }];
       return true; // Return true to continue rendering with fallback data
     }
   }
-
+  
   /**
    * Convert pricing data object to array
    */
@@ -169,7 +167,7 @@ export class PricingPage extends Page {
       ...pricingData[key]
     }));
   }
-
+  
   /**
    * Get active plans sorted by price
    */
@@ -183,7 +181,7 @@ export class PricingPage extends Page {
       .filter(plan => plan.active)
       .sort((a, b) => a.price - b.price);
   }
-
+  
   /**
    * Calculate savings amount for a plan
    * @param {Object} plan - The plan object
@@ -193,7 +191,7 @@ export class PricingPage extends Page {
     if (!plan || plan.duration <= 30) return 0;
     
     // Find the monthly plan
-    const monthlyPlan = this.pricingData.find(p => 
+    const monthlyPlan = this.pricingData.find(p =>
       p.active && p.duration <= 30 && p.duration >= 28
     );
     
@@ -206,7 +204,7 @@ export class PricingPage extends Page {
     // Calculate savings
     return Math.round(equivalentMonthlyTotal - plan.price);
   }
-
+  
   async getContent() {
     const activePlans = this.getActivePlans();
     
@@ -225,10 +223,10 @@ export class PricingPage extends Page {
         </div>
       `;
     }
-
+    
     // Generate pricing cards HTML
     const pricingCardsHtml = activePlans.map(plan => this.renderPricingCard(plan)).join('');
-
+    
     return `
       <div class="pcg-container">
         <div class="pcg-header">
@@ -299,7 +297,7 @@ export class PricingPage extends Page {
       </div>
     `;
   }
-
+  
   /**
    * Render a pricing card for a plan
    * @param {Object} plan - The plan object
@@ -313,7 +311,7 @@ export class PricingPage extends Page {
     const savingsAmount = this.calculateSavings(plan);
     
     // Determine if this is the featured plan (the one with the longest duration)
-    const isFeatured = plan === this.getActivePlans().reduce((a, b) => 
+    const isFeatured = plan === this.getActivePlans().reduce((a, b) =>
       a.duration > b.duration ? a : b, { duration: 0 });
     
     // Generate features HTML
@@ -358,7 +356,7 @@ export class PricingPage extends Page {
       </div>
     `;
   }
-
+  
   async afterContentRender() {
     // Set up event listeners for subscription buttons
     const subscribeButtons = this.container.querySelectorAll(".pcg-subscribe-btn");
@@ -368,14 +366,14 @@ export class PricingPage extends Page {
         this.handleSubscription(planId);
       });
     });
-
+    
     // Set up FAQ toggles
     const faqQuestions = this.container.querySelectorAll(".pcg-faq-question");
     faqQuestions.forEach((question) => {
       question.addEventListener("click", () => {
         const faqId = question.getAttribute("data-faq");
         const answer = this.container.querySelector(`#faq-${faqId}`);
-
+        
         if (answer) {
           answer.classList.toggle("pcg-faq-answer-open");
           question.classList.toggle("pcg-faq-question-open");
@@ -383,7 +381,7 @@ export class PricingPage extends Page {
       });
     });
   }
-
+  
   handleSubscription(planId) {
     // Find the plan in our data
     const plan = this.pricingData.find(p => p.id === planId);
@@ -394,25 +392,25 @@ export class PricingPage extends Page {
     
     // Get the button that was clicked
     const button = this.container.querySelector(`#subscribe-${planId}`);
-
+    
     if (button) {
       // Disable all buttons to prevent multiple clicks
       this.toggleButtonState(true);
-
+      
       // Replace button text with spinner
       const originalText = button.innerHTML;
       button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-
+      
       // Show toast notification
       if (window.app && window.app.showToast) {
         window.app.showToast(`Processing ${plan.name} subscription...`, "info");
       }
-
+      
       // Determine the redirect URL based on the plan
       // For backward compatibility, use tab=1 for monthly and tab=2 for quarterly/longer plans
       const tabId = plan.duration <= 30 ? "1" : "2";
       const redirectUrl = `/upgrade?tab=${tabId}&plan=${planId}`;
-
+      
       // Wait 1.5 seconds before redirecting (reduced from 3 seconds for better UX)
       setTimeout(() => {
         // Navigate to subscription processing page
@@ -420,7 +418,7 @@ export class PricingPage extends Page {
           window.app.navigateTo(redirectUrl);
         } else {
           console.error("Navigation function not available");
-
+          
           // Restore button state if navigation fails
           button.innerHTML = originalText;
           this.toggleButtonState(false);
@@ -428,10 +426,10 @@ export class PricingPage extends Page {
       }, 1500);
     }
   }
-
+  
   toggleButtonState(disabled) {
     this.isButtonDisabled = disabled;
-
+    
     const subscribeButtons = this.container.querySelectorAll(".pcg-subscribe-btn");
     subscribeButtons.forEach(button => {
       button.disabled = disabled;

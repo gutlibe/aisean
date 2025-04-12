@@ -17,13 +17,6 @@ export default class MenuManager {
                 requiresAuth: false,
                 badge: { text: "New!", type: "success" },
             },
-            {
-                path: "/admin",
-                text: "Dashboard",
-                icon: "fas fa-box",
-                requiresAuth: false,
-                badge: { text: "New!", type: "success" },
-            },
         ],
     },
     {
