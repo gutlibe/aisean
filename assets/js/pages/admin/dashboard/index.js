@@ -45,7 +45,7 @@ export class DashboardPage extends Page {
                 color: "var(--warning)"
             },
             {
-                title: "Bot Configuration",
+                title: "Settings ",
                 icon: "fas fa-cogs",
                 description: "Configure application settings",
                 route: "/admin/configs", 
