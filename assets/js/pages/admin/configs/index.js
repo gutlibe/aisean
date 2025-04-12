@@ -33,6 +33,21 @@ export class ConfigsAdminPage extends Page {
   }
 
   /**
+   * Escape HTML special characters to prevent XSS
+   * @param {string} str - The string to escape
+   * @returns {string} - The escaped string
+   */
+  escapeHtml(str) {
+    if (!str || typeof str !== 'string') return '';
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  /**
    * Return the page title shown in the header
    */
   getTitle() {
