@@ -88,20 +88,24 @@ class RouteManager {
                 requiresAuth: true,
                 authorizedUserTypes: ["Admin"],
             },
-            "/admin/pricing": { // New route
-                path: "/admin/pricing",
-                moduleLoader: () => import("../pages/admin/pricing/index.js"),
-                title: "Manage Pricing",
-                requiresAuth: true,
-                authorizedUserTypes: ["Admin"],
-            },
-            "/admin/config": { // New route
-                path: "/admin/config",
-                moduleLoader: () => import("../pages/admin/config/index.js"),
-                title: "Bot Configuration",
-                requiresAuth: true,
-                authorizedUserTypes: ["Admin"],
-            },
+            
+"/admin/pricing": {
+  path: "/admin/pricing",
+  moduleLoader: () => import("../pages/admin/pricing/index.js"),
+  title: "Pricing Management",
+  requiresAuth: true,
+  authorizedUserTypes: ["Admin"],
+  unauthorizedRedirectPath: "/404", 
+},
+"/admin/configs": {
+  path: "/admin/configs",
+  moduleLoader: () => import("../pages/admin/configs/index.js"),
+  title: "System Configuration",
+  requiresAuth: true,
+  authorizedUserTypes: ["Admin"],
+  unauthorizedRedirectPath: "/404", 
+},
+
         };
 
         // Track additional dynamic routes that may be added at runtime

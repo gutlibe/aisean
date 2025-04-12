@@ -45,17 +45,17 @@ export class DashboardPage extends Page {
                 color: "var(--warning)"
             },
             {
-                title: "Bot Configuration", // Changed title
+                title: "Bot Configuration",
                 icon: "fas fa-cogs",
                 description: "Configure application settings",
-                route: "/admin/config", // Changed route
+                route: "/admin/configs", 
                 color: "var(--primary-hover)"
             },
             {
-                title: "Manage Pricing", // Changed title
+                title: "Manage Pricing",
                 icon: "fas fa-credit-card",
                 description: "Manage subscription tiers and pricing",
-                route: "/admin/pricing", // Changed route
+                route: "/admin/pricing", 
                 color: "var(--danger)"
             },
             {
