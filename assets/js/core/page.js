@@ -3,7 +3,7 @@ import { AuthManager } from "./utils/pg-auth.js"
 export class Page {
   constructor() {
     // Basic configuration
-    this.container = document.getElementById("page-content")
+    this.container = null // Initialize as null, will be set during render
     this.showMenuIcon = true
     this.showBackArrow = false
     this.requiresDatabase = false
@@ -43,6 +43,8 @@ export class Page {
 
     // Navigation
     this.navigationAbortController = null
+    this.preparedHeader = null
+    this.preparedSkeleton = null
 
     // Bind methods to ensure proper 'this' context
     this.handleLoginClick = this.handleLoginClick.bind(this)
@@ -101,26 +103,6 @@ export class Page {
     this.updateHeaderActions()
   }
 
-  // HTML Template for global loader
-  _globalLoaderTemplate() {
-    return `
-    <div class="global-loader">
-      <div class="loader">
-        <div class="shimmer-container">
-          <h1 class="shimmer-text">AIsean</h1>
-          <div class="shimmer-effect"></div>
-        </div>
-        <p class="loader-tagline">Loading your experience...</p>
-        <div class="progress-circles">
-          <div class="progress-circle"></div>
-          <div class="progress-circle"></div>
-          <div class="progress-circle"></div>
-        </div>
-      </div>
-    </div>
-  `
-  }
-
   _errorWithRetryTemplate(message) {
     return `
         <div class="temporary-error">
@@ -142,7 +124,7 @@ export class Page {
 
     const displayMessage = messages[errorType] || messages.UNKNOWN_ERROR
     const buttonHtml = canRetry
-      ? `<button class="btn btn-primary retry" onclick="this.closest('.page-content').dispatchEvent(new CustomEvent('retryRender'))">Try Again</button>`
+      ? `<button class="btn btn-primary retry" onclick="this.closest('#page-content').dispatchEvent(new CustomEvent('retryRender'))">Try Again</button>`
       : errorType === "UNAUTHORIZED"
         ? `<button class="btn btn-primary go-home" onclick="window.location.href='/'">Go Home</button>`
         : errorType === "AUTH_ERROR"
@@ -180,26 +162,16 @@ export class Page {
     `
   }
 
-  showGlobalLoader() {
-    this.hideGlobalLoader()
-    if (!this.container.querySelector(".global-loader")) {
-      this.container.insertAdjacentHTML("beforeend", this._globalLoaderTemplate())
-    }
-  }
-
-  hideGlobalLoader() {
-    const loader = this.container.querySelector(".global-loader")
-    if (loader) {
-      loader.remove()
-    }
-  }
-
   showRetryPrompt(message) {
     this.hideRetryPrompt()
-    const loader = this.container.querySelector(".global-loader")
-    if (loader) {
-      loader.insertAdjacentHTML("beforeend", this._errorWithRetryTemplate(message))
-      const retryButton = loader.querySelector(".retry-now")
+    // Safely check if container exists before attempting to use it
+    if (!this.container) return
+
+    // Try appending to page-content-wrapper first, then container
+    const targetElement = this.container.querySelector("#page-content-wrapper") || this.container
+    if (targetElement) {
+      targetElement.insertAdjacentHTML("beforeend", this._errorWithRetryTemplate(message))
+      const retryButton = targetElement.querySelector(".retry-now")
       if (retryButton) {
         retryButton.addEventListener("click", () => {
           this.currentRenderAttempt = 0
@@ -210,37 +182,52 @@ export class Page {
   }
 
   hideRetryPrompt() {
+    // Safely check if container exists before attempting to use it
+    if (!this.container) return
+
     const retryPrompt = this.container.querySelector(".temporary-error")
     if (retryPrompt) {
       retryPrompt.remove()
     }
   }
 
-  // Modify the render method to prevent FOUC during page transitions
-  async render() {
+  // Default skeleton template - can be overridden by subclasses
+  getSkeletonTemplate() {
+    return `
+      <div class="skeleton-container">
+        <div class="skeleton-header pulse"></div>
+        <div class="skeleton-content">
+          <div class="skeleton-item pulse"></div>
+          <div class="skeleton-item pulse"></div>
+          <div class="skeleton-item pulse"></div>
+        </div>
+      </div>
+    `
+  }
+
+  // Prepare render method - separates preparation from DOM manipulation
+  async prepareRender() {
     const renderTimestamp = Date.now()
     this.latestRenderTimestamp = renderTimestamp
 
+    // Create a new abort controller for this navigation
     if (this.navigationAbortController) {
-      this.navigationAbortController.abort()
+      this.navigationAbortController.abort("New navigation started")
     }
     this.navigationAbortController = new AbortController()
     const signal = this.navigationAbortController.signal
 
     this.loadingState = "initial"
-    this.showGlobalLoader()
-    this.hideRetryPrompt()
-    if (this.temporaryErrorMessage) {
-      this.showRetryPrompt(this.temporaryErrorMessage)
-      this.temporaryErrorMessage = null
-    }
+    this.temporaryErrorMessage = null
 
     try {
       if (signal.aborted) throw new Error("NAVIGATION_INTERRUPTED")
 
-      // Load page-specific CSS first BEFORE modifying the DOM
-      // This prevents FOUC by ensuring CSS is ready before content changes
+      // Load page-specific CSS first
       await this.loadPageCSS()
+
+      // Prepare skeleton immediately so it's ready when needed
+      this.preparedSkeleton = this.getSkeletonTemplate()
 
       this.loadingState = "auth"
       const authResult = await this.authManager.verifyAuth()
@@ -255,14 +242,8 @@ export class Page {
         }, 2000)
       } else if (!authResult.success) {
         if (authResult.error === "AUTH_ERROR") {
-          console.log("Redirecting to login due to AUTH_ERROR")
-          window.location.replace("/login")
           throw new Error("AUTH_ERROR")
         } else if (authResult.error === "UNAUTHORIZED") {
-          console.log("Redirecting to unauthorized path due to UNAUTHORIZED")
-          // Use the router's method to get the appropriate redirect path
-          const redirectPath = window.app.router.getUnauthorizedRedirectPath()
-          window.app.navigateTo(redirectPath)
           throw new Error("UNAUTHORIZED")
         }
         throw new Error(authResult.error || "AUTH_ERROR")
@@ -270,20 +251,47 @@ export class Page {
 
       if (signal.aborted) throw new Error("NAVIGATION_INTERRUPTED")
 
-      const header = this.getPageHeader()
-      const skeleton = this.getSkeletonTemplate()
+      // Prepare header after auth check
+      this.preparedHeader = this.getPageHeader()
 
-      if (!signal.aborted) {
-        // Create a temporary container for the new content
-        const tempContainer = document.createElement("div")
-        tempContainer.innerHTML = header + `<div id="page-content-wrapper">${skeleton || ""}</div>`
+      // Return true to indicate preparation is complete
+      return true
+    } catch (error) {
+      console.error("Prepare render error:", error)
+      throw error
+    }
+  }
 
-        // Only replace the container content when everything is ready
-        this.container.innerHTML = tempContainer.innerHTML
-        await this.afterStructureRender()
-        this.loadingState = "structure"
+  // Finalize render method - handles DOM manipulation
+  async finalizeRender() {
+    try {
+      // Ensure container exists
+      this.container = document.getElementById("page-content")
+      if (!this.container) {
+        throw new Error("Page container not found")
       }
 
+      if (!this.preparedHeader || !this.preparedSkeleton) {
+        // If preparation failed or wasn't called, fallback to regular render
+        return this.render()
+      }
+
+      // Create a temporary container for the new content
+      const tempContainer = document.createElement("div")
+      // Render header and skeleton immediately using prepared content
+      tempContainer.innerHTML =
+        this.preparedHeader + `<div id="page-content-wrapper">${this.preparedSkeleton || ""}</div>`
+
+      // Replace the container content
+      this.container.innerHTML = tempContainer.innerHTML
+
+      // Now that we have content, we can hide any retry prompts
+      this.hideRetryPrompt()
+
+      await this.afterStructureRender()
+      this.loadingState = "structure"
+
+      // Continue with database loading if needed
       if (this.requiresDatabase && this.loadDatabaseContent) {
         this.startLoadingTimer()
         try {
@@ -298,45 +306,68 @@ export class Page {
           await this.databaseLoadPromise
         } catch (error) {
           console.error("Database load error:", error)
-          if (signal.aborted) throw new Error("NAVIGATION_INTERRUPTED")
+          if (this.navigationAbortController.signal.aborted) throw new Error("NAVIGATION_INTERRUPTED")
           throw error.message?.includes("timeout") ? new Error("DATABASE_TIMEOUT") : new Error("DATABASE_ERROR")
+        } finally {
+          this.clearLoadingTimer()
         }
       }
 
-      if (signal.aborted) throw new Error("NAVIGATION_INTERRUPTED")
+      if (this.navigationAbortController.signal.aborted) throw new Error("NAVIGATION_INTERRUPTED")
 
+      // Continue with content rendering
       const contentWrapper = this.container.querySelector("#page-content-wrapper")
       if (contentWrapper) {
         this.loadingState = "content"
         const content = await this.getContent()
-        if (!signal.aborted) {
+        if (!this.navigationAbortController.signal.aborted) {
           // Create a temporary element to hold the new content
           const tempElement = document.createElement("div")
           tempElement.innerHTML = content
 
-          // Replace content in a single operation to prevent FOUC
+          // Replace skeleton/content in the wrapper
           contentWrapper.innerHTML = tempElement.innerHTML
         }
       }
 
-      if (!signal.aborted) {
+      if (!this.navigationAbortController.signal.aborted) {
         await this.afterContentRender()
       }
 
-      this.clearLoadingTimer()
       this.loadingState = "complete"
-      this.hideGlobalLoader()
       this.currentRenderAttempt = 0
+
+      // Clear prepared content references
+      this.preparedHeader = null
+      this.preparedSkeleton = null
+    } catch (error) {
+      console.error("Finalize render error:", error)
+      await this.handleRenderError(error)
+    }
+  }
+
+  // Legacy render method - now uses the two-phase rendering approach
+  async render() {
+    try {
+      await this.prepareRender()
+      await this.finalizeRender()
     } catch (error) {
       console.error("Render error:", error)
-      if (this.latestRenderTimestamp === renderTimestamp) {
-        await this.handleRenderError(error)
-      }
+      await this.handleRenderError(error)
     }
   }
 
   async handleRenderError(error) {
     this.clearLoadingTimer()
+
+    // Ensure container exists
+    if (!this.container) {
+      this.container = document.getElementById("page-content")
+      if (!this.container) {
+        console.error("Cannot handle render error: page container not found")
+        return
+      }
+    }
 
     const errorType = !error
       ? "UNKNOWN_ERROR"
@@ -373,10 +404,10 @@ export class Page {
     }
 
     this.loadingState = "error"
-    this.hideGlobalLoader()
 
     if (!["AUTH_ERROR", "UNAUTHORIZED"].includes(errorType)) {
       const canRetry = ["NETWORK_ERROR", "DATABASE_ERROR", "DATABASE_TIMEOUT"].includes(errorType)
+      // Replace the entire page container content with the error state
       this.container.innerHTML = this._errorTemplate(errorType, canRetry)
 
       if (canRetry) {
@@ -387,6 +418,13 @@ export class Page {
         }
         this.container.addEventListener("retryRender", retryHandler)
       }
+    } else if (errorType === "AUTH_ERROR") {
+      console.log("Redirecting to login due to AUTH_ERROR")
+      window.location.replace("/login")
+    } else if (errorType === "UNAUTHORIZED") {
+      console.log("Redirecting to unauthorized path due to UNAUTHORIZED")
+      const redirectPath = window.app.router.getUnauthorizedRedirectPath()
+      window.app.navigateTo(redirectPath)
     }
   }
 
@@ -394,6 +432,7 @@ export class Page {
     this.clearLoadingTimer()
     this.loadingTimer = setTimeout(() => {
       if (this.loadingState !== "complete" && this.loadingState !== "error") {
+        console.warn(`Loading timer expired (${this.loadingTimeout}ms) in state: ${this.loadingState}`)
         this.handleRenderError(new Error("DATABASE_TIMEOUT"))
       }
     }, this.loadingTimeout)
@@ -537,213 +576,126 @@ export class Page {
     await this.afterContentRender()
   }
 
-  // Update header actions and toggle title classes without using :has()
   updateHeaderActions() {
-    const actionsContainer = this.container.querySelector(".page-actions")
-    if (!actionsContainer) return
-    actionsContainer.innerHTML = ""
-    let actionsAdded = 0
+    if (!this.container) return
 
-    let customActionsHtml = ""
-    if (this.constructor.prototype.getActions !== Page.prototype.getActions && typeof this.getActions === "function") {
-      customActionsHtml = this.getActions()
-      if (customActionsHtml) {
-        actionsContainer.insertAdjacentHTML("beforeend", customActionsHtml)
-        actionsAdded += customActionsHtml.trim() ? 1 : 0
+    // Update login button
+    if (!this.requiresAuth) {
+      const loginBtn = this.container.querySelector("#loginBtn")
+      if (loginBtn && !this.loginButton) {
+        this.loginButton = loginBtn
+        this.loginButton.addEventListener("click", this.handleLoginClick)
       }
     }
 
-    if (
-      this.constructor.prototype.getActions === Page.prototype.getActions &&
-      typeof this.getAdditionalActions === "function"
-    ) {
-      const additionalHtml = this.getAdditionalActions()
-      if (additionalHtml) {
-        actionsContainer.insertAdjacentHTML("beforeend", additionalHtml)
-        actionsAdded += additionalHtml.trim() ? 1 : 0
+    // Update upgrade button
+    if (this.showUpgradeButton) {
+      const upgradeBtn = this.container.querySelector("#upgradeBtn")
+      if (upgradeBtn && !this.upgradeButton) {
+        this.upgradeButton = upgradeBtn
+        this.upgradeButton.addEventListener("click", this.handleUpgradeClick)
+      }
+
+      const premiumBtn = this.container.querySelector("#premiumBtn")
+      if (premiumBtn && !this.premiumButton) {
+        this.premiumButton = premiumBtn
+        this.premiumButton.addEventListener("click", this.handlePremiumClick)
       }
     }
 
-    if (this.authData?.user) {
-      if (this.showUpgradeButton) {
-        const buttonHtml = this.getUpgradeButton()
-        if (buttonHtml) {
-          actionsContainer.insertAdjacentHTML("beforeend", buttonHtml)
-          actionsAdded++
-        }
-      }
-      if (this.showProfileAvatar === true && this.authData.username) {
-        const avatarHtml = this._profileAvatarTemplate(this.authData.username)
-        const profileContainer = document.createElement("div")
-        profileContainer.className = "profile-container"
-        profileContainer.innerHTML = avatarHtml
-        actionsContainer.appendChild(profileContainer)
-        actionsAdded++
-      }
-    } else {
-      if (!this.requiresAuth) {
-        const loginHtml = this.getLoginButton()
-        if (loginHtml) {
-          actionsContainer.insertAdjacentHTML("beforeend", loginHtml)
-          actionsAdded++
+    // Update profile avatar
+    if (this.showProfileAvatar && this.authData?.user) {
+      const profileContainer = this.container.querySelector(".profile-container")
+      if (profileContainer) {
+        const username = this.authData.user.displayName || this.authData.user.email || "User"
+        profileContainer.innerHTML = this._profileAvatarTemplate(username)
+        profileContainer.style.display = "flex"
+        if (!this.profileAvatar) {
+          this.profileAvatar = profileContainer
+          this.profileAvatar.addEventListener("click", this.handleProfileClick)
         }
       }
     }
 
-    actionsContainer.style.display = actionsAdded > 0 ? "" : "none"
-    this.updateTitleTruncation(actionsAdded)
-    this.setupHeaderActionListeners()
-  }
-
-  // Toggle title classes based on the presence of header actions
-  updateTitleTruncation(actionsCount) {
-    const pageTitle = this.container.querySelector(".page-title")
-    if (!pageTitle) return
-    const titleLength = pageTitle.textContent?.trim().length || 0
-    const isLongTitle = titleLength > 30
-
-    if (actionsCount > 0) {
-      pageTitle.classList.add("with-actions")
-      if (isLongTitle) {
-        pageTitle.classList.add("long-title")
-      } else {
-        pageTitle.classList.remove("long-title")
+    // Update back arrow
+    if (this.showBackArrow) {
+      const backArrow = this.container.querySelector(".back-arrow")
+      if (backArrow) {
+        backArrow.addEventListener("click", () => {
+          if (window.app?.router) {
+            window.app.router.goBack()
+          } else {
+            window.history.back()
+          }
+        })
       }
-    } else {
-      pageTitle.classList.remove("with-actions", "long-title")
     }
-  }
 
-  setupHeaderActionListeners() {
-    this.loginButton = this.container.querySelector("#loginBtn")
-    if (this.loginButton) {
-      this.loginButton.removeEventListener("click", this.handleLoginClick)
-      this.loginButton.addEventListener("click", this.handleLoginClick)
-    }
-    this.upgradeButton = this.container.querySelector("#upgradeBtn")
-    if (this.upgradeButton) {
-      this.upgradeButton.removeEventListener("click", this.handleUpgradeClick)
-      this.upgradeButton.addEventListener("click", this.handleUpgradeClick)
-    }
-    this.premiumButton = this.container.querySelector("#premiumBtn")
-    if (this.premiumButton) {
-      this.premiumButton.removeEventListener("click", this.handlePremiumClick)
-      this.premiumButton.addEventListener("click", this.handlePremiumClick)
-    }
-    const profileAvatar = this.container.querySelector(".profile-avatar")
-    if (profileAvatar) {
-      profileAvatar.removeEventListener("click", this.handleProfileClick)
-      profileAvatar.addEventListener("click", this.handleProfileClick)
-    }
-    this.setupCustomActionListeners()
-  }
-
-  // Placeholder for subclasses to set up custom action listeners
-  setupCustomActionListeners() {
-    // To be implemented by subclasses if needed
-  }
-
-  async afterStructureRender() {
-    const header = this.container.querySelector(".page-header-content")
-    if (header) {
-      this.handleHeaderClick = (e) => {
-        const menuToggle = e.target.closest(".menu-toggle")
-        const backArrow = e.target.closest(".back-arrow")
-        if (menuToggle && window.app?.menuManager) {
-          window.app.menuManager.toggleMenu()
-        } else if (backArrow && window.app?.router) {
-          window.app.router.goBack()
-        }
+    // Update menu toggle
+    if (this.showMenuIcon) {
+      const menuToggle = this.container.querySelector(".menu-toggle")
+      if (menuToggle) {
+        menuToggle.addEventListener("click", () => {
+          if (window.app?.menuManager) {
+            window.app.menuManager.toggleMenu()
+          }
+        })
       }
-      header.addEventListener("click", this.handleHeaderClick)
     }
-    this.updateHeaderActions()
-    this.authListener = this.authManager.setupAuthListener((userData) => {
-      if (userData !== this.authData) {
-        this.authData = userData
-        this.updateHeaderActions()
-      }
-    })
-    // Register resize event listener for dynamic updates
-    window.addEventListener("resize", this.handleResize)
   }
 
-  async afterContentRender() {
-    // To be implemented by subclasses if needed
+  getTitle() {
+    return "Page"
   }
 
-  async afterRender() {
-    // This is now split between afterStructureRender and afterContentRender
-  }
-
-  getSkeletonTemplate() {
+  getHeaderIcon() {
     return ""
   }
 
   async getContent() {
-    return "<div>Page Content</div>"
+    return "<div>Page content not implemented</div>"
   }
 
-  async loadDatabaseContent() {
-    return Promise.resolve()
+  async afterStructureRender() {
+    this.updateHeaderActions()
+    window.addEventListener("resize", this.handleResize)
   }
 
-  getTitle() {
-    return this.pageTitle || "Untitled Page"
-  }
-
-  getHeaderIcon() {
-    return this.headerIcon || ""
+  async afterContentRender() {
+    // Override in subclasses
   }
 
   getUserData() {
-    return this.authManager.getUserData()
-  }
-
-  getUserType() {
-    return this.authManager.getUserType()
-  }
-
-  getUserName() {
-    return this.authManager.getUserName()
-  }
-
-  isUserAuthorized() {
-    return this.authManager.isUserAuthorized()
+    return this.authData?.user || null
   }
 
   destroy() {
-    this.clearLoadingTimer()
-    const header = this.container.querySelector(".page-header-content")
-    if (header && this.handleHeaderClick) {
-      header.removeEventListener("click", this.handleHeaderClick)
-    }
-    if (this.loginButton) {
-      this.loginButton.removeEventListener("click", this.handleLoginClick)
-    }
-    if (this.upgradeButton) {
-      this.upgradeButton.removeEventListener("click", this.handleUpgradeClick)
-    }
-    if (this.premiumButton) {
-      this.premiumButton.removeEventListener("click", this.handlePremiumClick)
-    }
-    const profileAvatar = this.container.querySelector(".profile-avatar")
-    if (profileAvatar) {
-      profileAvatar.removeEventListener("click", this.handleProfileClick)
-    }
+    // Clean up event listeners
+    window.removeEventListener("resize", this.handleResize)
+
+    // Clean up auth listener
     if (this.authListener) {
       this.authListener()
       this.authListener = null
     }
-    if (this.databaseLoadPromise && typeof this.databaseLoadPromise.cancel === "function") {
-      this.databaseLoadPromise.cancel()
-    }
+
+    // Clean up navigation controller
     if (this.navigationAbortController) {
       this.navigationAbortController.abort()
+      this.navigationAbortController = null
     }
-    // Remove resize event listener
-    window.removeEventListener("resize", this.handleResize)
-    this.hideGlobalLoader()
+
+    // Clean up timers
+    this.clearLoadingTimer()
+
+    // Clean up references
+    this.container = null
+    this.loginButton = null
+    this.upgradeButton = null
+    this.premiumButton = null
+    this.profileAvatar = null
+    this.authData = null
+    this.preparedHeader = null
+    this.preparedSkeleton = null
   }
 }
-
