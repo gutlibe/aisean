@@ -26,20 +26,16 @@ class App {
     this.subscriptionManager = null
     this.isNavigating = false
     this.navigationTimeout = null
+    this.homePagePreloadPromise = null
+    this.homePageReady = false
 
     this.createAppStructure()
+    this.startPreloadingHomePage()
 
-    this.init()
-      .catch((error) => {
-        console.error("Initialization error:", error)
-        toastManager.show(
-          "Something went wrong while starting the application. Please try refreshing the page.",
-          "error",
-        )
-      })
-      .finally(() => {
-        this.hideSplashScreen()
-      })
+    this.init().catch((error) => {
+      console.error("Initialization error:", error)
+      toastManager.show("Something went wrong while starting the application. Please try refreshing the page.", "error")
+    })
   }
 
   createAppStructure() {
@@ -70,22 +66,7 @@ class App {
 
     const mainContent = document.createElement("main")
     mainContent.className = "main-content"
-    mainContent.innerHTML = `
-        <div class="content-wrap">
-            <div id="page-content">
-                <div class="skeleton-container">
-                  <div class="skeleton-header pulse"></div>
-                  <div class="skeleton-content">
-                    <div class="skeleton-item pulse"></div>
-                    <div class="skeleton-item pulse"></div>
-                    <div class="skeleton-item pulse"></div>
-                    <div class="skeleton-item pulse"></div>
-                    <div class="skeleton-item pulse"></div>
-                  </div>
-                </div>
-            </div>
-        </div>
-    `
+    mainContent.innerHTML = `<div class="content-wrap"><div id="page-content"></div></div>`
 
     const overlay = document.createElement("div")
     overlay.className = "overlay"
@@ -96,6 +77,38 @@ class App {
     document.body.appendChild(layoutDiv)
   }
 
+  async startPreloadingHomePage() {
+    this.homePagePreloadPromise = new Promise(async (resolve) => {
+      try {
+        await this.injectCSS()
+
+        const homePath = "/"
+        if (this.cssManager) {
+          await this.cssManager.loadPageStyle(homePath)
+        }
+
+        const routeInfo = routeManager.getRouteInfo(homePath)
+        if (routeInfo && routeInfo.moduleLoader) {
+          const module = await routeInfo.moduleLoader()
+
+          if (module) {
+            const PageClass = Object.values(module)[0]
+            const homePage = new PageClass()
+
+            this.preloadedHomePage = homePage
+            await homePage.prepareRender()
+
+            this.homePageReady = true
+            resolve(true)
+          }
+        }
+      } catch (error) {
+        console.warn("Home page preloading error:", error)
+        resolve(false)
+      }
+    })
+  }
+
   async injectCSS() {
     try {
       this.cssManager = new CSSManager()
@@ -104,7 +117,6 @@ class App {
       return true
     } catch (error) {
       console.error("CSS injection error:", error)
-      toastManager.show("Some visual elements may not display correctly.", "error")
       return false
     }
   }
@@ -116,36 +128,44 @@ class App {
     return Promise.resolve(false)
   }
 
-  hideSplashScreen() {
-    if (this.splashScreen) {
-      const layout = document.querySelector(".layout")
-      if (layout) {
-        const pageContent = document.getElementById("page-content")
-        if (pageContent && !pageContent.querySelector(".skeleton-container")) {
-          pageContent.innerHTML = `
-          <div class="skeleton-container">
-            <div class="skeleton-header pulse"></div>
-            <div class="skeleton-content">
-              <div class="skeleton-item pulse"></div>
-              <div class="skeleton-item pulse"></div>
-              <div class="skeleton-item pulse"></div>
-              <div class="skeleton-item pulse"></div>
-              <div class="skeleton-item pulse"></div>
-            </div>
-          </div>
-        `
-        }
+  async hideSplashScreen() {
+    if (!this.splashScreen) return
 
-        layout.style.visibility = "visible"
+    const layout = document.querySelector(".layout")
+    if (!layout) return
+
+    try {
+      await this.homePagePreloadPromise
+
+      const pageContent = document.getElementById("page-content")
+      if (pageContent && this.homePageReady && this.preloadedHomePage) {
+        pageContent.innerHTML = ""
+        this.preloadedHomePage.container = pageContent
+        await this.preloadedHomePage.finalizeRender()
+
+        if (this.router) {
+          this.router.currentPage = this.preloadedHomePage
+          this.router.currentPath = "/"
+          this.router.cachePageInstance("/", this.preloadedHomePage)
+          this.router.updateMenuState("/")
+        }
       }
 
+      layout.style.visibility = "visible"
+
+      this.splashScreen.classList.add("hide")
       setTimeout(() => {
-        this.splashScreen.classList.add("hide")
-        setTimeout(() => {
-          this.splashScreen.remove()
-          this.splashScreen = null
-        }, 500)
-      }, 50)
+        this.splashScreen.remove()
+        this.splashScreen = null
+      }, 500)
+    } catch (error) {
+      console.error("Error during splash screen transition:", error)
+      layout.style.visibility = "visible"
+      this.splashScreen.classList.add("hide")
+      setTimeout(() => {
+        this.splashScreen.remove()
+        this.splashScreen = null
+      }, 500)
     }
   }
 
@@ -153,30 +173,19 @@ class App {
     try {
       window.app = this
 
-      await this.injectCSS()
-
       this.libraryLoader = await LibraryLoader.initialize()
       this.setupLibraryLoaderMethods()
 
       this.authManager = await AuthManager.initialize()
 
-      const firebase = this.libraryLoader.getLibrary("firebase")
-      if (!firebase) {
-        console.warn("Firebase library not available during init.")
-      }
-
       await this.initializeThemeManager()
-
       await this.initializeMenuManager()
-
       await this.initializeRouter()
-
       await Promise.all([this.initializeMaintenanceManager(), this.initializeSubscriptionManager()])
 
       this.setupGlobalMethods()
 
-      this.preloadHomePage()
-
+      await this.hideSplashScreen()
     } catch (error) {
       console.error("App Initialization failed:", error)
       toastManager.show("Unable to start the application. Please check your setup and connection.", "error")
@@ -194,7 +203,6 @@ class App {
         await this.libraryLoader.loadLibrary(libraryKey)
       } catch (error) {
         console.error("Library loading error:", error)
-        toastManager.show(`Unable to load required resources (${libraryKey}). Please refresh.`, "error")
         throw error
       }
     }
@@ -203,7 +211,6 @@ class App {
         return this.libraryLoader.getLibrary(libraryKey)
       } catch (error) {
         console.error("Library access error:", error)
-        toastManager.show(`Unable to access required resources (${libraryKey})`, "error")
         throw error
       }
     }
@@ -212,7 +219,6 @@ class App {
         this.libraryLoader.addLibraryConfig(key, config)
       } catch (error) {
         console.error("Library configuration error:", error)
-        toastManager.show("Unable to update resource configuration", "error")
         throw error
       }
     }
@@ -231,7 +237,6 @@ class App {
     const routeInitSuccess = await routeManager.initialize(this.router)
     if (!routeInitSuccess) {
       console.error("Route initialization failed")
-      toastManager.show("Some application pages may not be available", "error")
     }
   }
 
@@ -240,11 +245,7 @@ class App {
     if (this.themeManager) {
       this.menuManager.setThemeManager(this.themeManager)
     }
-    const initSuccess = await this.menuManager.initialize()
-    if (!initSuccess) {
-      console.warn("Menu initialization was not successful")
-      toastManager.show("Some navigation features may not work correctly", "warning")
-    }
+    await this.menuManager.initialize()
   }
 
   async initializeMaintenanceManager() {
@@ -255,7 +256,6 @@ class App {
   async initializeSubscriptionManager() {
     try {
       this.subscriptionManager = await SubscriptionManager.initialize()
-      console.log("Subscription manager initialized successfully")
       return true
     } catch (error) {
       console.error("Subscription manager initialization failed:", error)
@@ -329,7 +329,6 @@ class App {
 
     this.navigationTimeout = setTimeout(() => {
       if (this.isNavigating) {
-        console.warn("Navigation timeout reached, resetting navigation state")
         this.isNavigating = false
       }
     }, 10000)
@@ -353,12 +352,6 @@ class App {
 
       const isValid = routeManager.isValidRoute(path)
       const targetPath = isValid ? path : routeManager.getFallbackRoute()
-      const routeInfo = routeManager.getRouteInfo(targetPath)
-      const modulePath = routeInfo && routeInfo.isNestedRoute ? routeInfo.path : targetPath
-
-      if (!isValid) {
-        console.warn(`App: Invalid route requested: ${path}. Navigating to fallback: ${targetPath}`)
-      }
 
       if (this.router) {
         this.router.showNavigationIndicator()
@@ -369,7 +362,6 @@ class App {
           await this.cssManager.loadPageStyle(targetPath)
         } catch (cssError) {
           console.error(`App: Failed to load CSS for ${targetPath}:`, cssError)
-          toastManager.show(`Failed to load styles for ${targetPath}.`, "warning")
         }
       }
 
@@ -378,14 +370,10 @@ class App {
       } else {
         toastManager.show("Navigation system is unavailable", "error")
         console.error("App: Router not available for navigation!")
-        if (this.router) this.router.showError("Navigation failed: Router unavailable.")
       }
     } catch (error) {
       console.error(`App: Unhandled error during navigateTo('${path}'):`, error)
       toastManager.show(`Unable to navigate to ${path}. An unexpected error occurred.`, "error")
-      if (this.router) {
-        this.router.showError(`Navigation to ${path} failed unexpectedly.`)
-      }
     } finally {
       this.isNavigating = false
       clearTimeout(this.navigationTimeout)
@@ -438,42 +426,6 @@ class App {
 
   getLibraryLoader() {
     return this.libraryLoader
-  }
-
-  async preloadHomePage() {
-    try {
-      const currentPath = window.location.pathname
-      const homePath = "/"
-
-      if (currentPath === homePath || currentPath === "" || currentPath === "/index.html") {
-        if (this.cssManager) {
-          await this.cssManager.loadPageStyle(homePath)
-        }
-
-        if (this.router) {
-          const routeInfo = routeManager.getRouteInfo(homePath)
-          if (routeInfo && routeInfo.moduleLoader) {
-            try {
-              const modulePromise = routeInfo.moduleLoader()
-              modulePromise
-                .then((module) => {
-                  if (this.router) {
-                    this.router.moduleCache.set(homePath, module)
-                    console.log("Home page module preloaded successfully")
-                  }
-                })
-                .catch((err) => {
-                  console.warn("Home page preloading failed:", err)
-                })
-            } catch (error) {
-              console.warn("Failed to preload home page:", error)
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.warn("Home page preloading error:", error)
-    }
   }
 }
 
