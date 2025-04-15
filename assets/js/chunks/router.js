@@ -102,18 +102,7 @@ export default class Router {
 
   setNavigationIndicatorColor(color) {
     if (!color) return
-
     document.documentElement.style.setProperty("--navigation-indicator-color", color)
-
-    if (this.navigationIndicator) {
-      const existingStyle = document.querySelector("style[data-navigation-indicator]")
-      if (existingStyle) {
-        existingStyle.textContent = existingStyle.textContent.replace(
-          /background: linear-gradient\(90deg, transparent, var\(--primary-color, #3498db\), transparent\)/,
-          `background: linear-gradient(90deg, transparent, var(--navigation-indicator-color, ${color}), transparent)`
-        )
-      }
-    }
   }
 
   showNavigationIndicator() {
@@ -160,7 +149,7 @@ export default class Router {
 
   cachePageInstance(path, pageInstance) {
     const existingPage = this.pageCache.get(path)
-    if (existingPage && typeof existingPage.destroy === "function") {
+    if (existingPage && typeof existingPage.destroy === "function" && existingPage !== pageInstance) {
       try {
         existingPage.destroy()
       } catch (error) {
@@ -192,17 +181,13 @@ export default class Router {
 
   async handleInitialRoute(path) {
     try {
-      const contentContainer = document.getElementById("page-content")
-      const hasContent =
-        contentContainer && contentContainer.children.length > 0 && !contentContainer.querySelector(".critical-error")
-
-      if (!hasContent) {
-        this.showInitialSkeleton()
-      }
-
       if (path.includes("index.html")) {
         path = this.defaultPath
         window.history.replaceState({}, "", path)
+      }
+
+      if (window.app?.preloadedHomePage && (path === "/" || path === "")) {
+        return
       }
 
       if (routeManager.isValidRoute(path)) {
@@ -218,24 +203,6 @@ export default class Router {
       this.isNavigating = false
       this.hideNavigationIndicator()
     }
-  }
-
-  showInitialSkeleton() {
-    const contentContainer = document.getElementById("page-content")
-    if (!contentContainer) return
-
-    contentContainer.innerHTML = `
-      <div class="skeleton-container">
-        <div class="skeleton-header pulse"></div>
-        <div class="skeleton-content">
-          <div class="skeleton-item pulse"></div>
-          <div class="skeleton-item pulse"></div>
-          <div class="skeleton-item pulse"></div>
-          <div class="skeleton-item pulse"></div>
-          <div class="skeleton-item pulse"></div>
-        </div>
-      </div>
-    `
   }
 
   async handleRoute(event = null, isInitial = false) {
@@ -265,7 +232,6 @@ export default class Router {
       const targetPath = routeExists ? path : "/404"
 
       const routeInfo = routeManager.getRouteInfo(targetPath)
-
       const modulePath = routeInfo && routeInfo.isNestedRoute ? routeInfo.path : targetPath
 
       const cachedPage = this.getCachedPageInstance(modulePath)
@@ -293,12 +259,17 @@ export default class Router {
         }
       }
 
-      if (isInitial) {
-        this.showInitialSkeleton()
+      const contentContainer = document.getElementById("page-content")
+      if (contentContainer && !contentContainer.querySelector(".skeleton-container")) {
+        const targetPage = await this.cacheModule(modulePath)
+        if (targetPage) {
+          const PageClass = Object.values(targetPage)[0]
+          const tempPage = new PageClass()
+          contentContainer.innerHTML = tempPage.getSkeletonTemplate()
+        }
       }
 
       const newPage = await this.prepareNewPage(path, modulePath, routeInfo)
-
       await this.finishNavigation(newPage, path)
     } catch (error) {
       console.error("Route handling error:", error)
@@ -381,8 +352,6 @@ export default class Router {
 
   async loadNotFoundPage() {
     try {
-      this.showInitialSkeleton()
-
       if (this.currentPage && typeof this.currentPage.destroy === "function") {
         this.currentPage.destroy()
         this.currentPage = null
@@ -449,8 +418,18 @@ export default class Router {
     const targetPath = routeExists ? path : "/404"
 
     const routeInfo = routeManager.getRouteInfo(targetPath)
-
     const modulePath = routeInfo && routeInfo.isNestedRoute ? routeInfo.path : targetPath
+
+    const contentContainer = document.getElementById("page-content")
+    if (contentContainer && !contentContainer.querySelector(".skeleton-container")) {
+      this.cacheModule(modulePath).then(module => {
+        if (module) {
+          const PageClass = Object.values(module)[0]
+          const tempPage = new PageClass()
+          contentContainer.innerHTML = tempPage.getSkeletonTemplate()
+        }
+      }).catch(err => console.warn("Failed to show skeleton:", err))
+    }
 
     this.prepareNewPage(path, modulePath, routeInfo)
       .then((newPage) => {
@@ -506,9 +485,6 @@ export default class Router {
       window.app.showToast(message, "info")
       return
     }
-
-    const content = document.getElementById("page-content")
-    if (!content) return
 
     const messageElement = document.createElement("div")
     messageElement.className = "message temp-message"
