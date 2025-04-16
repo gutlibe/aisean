@@ -28,6 +28,7 @@ class App {
     this.navigationTimeout = null
     this.homePagePreloadPromise = null
     this.homePageReady = false
+    this.currentPath = window.location.pathname
 
     this.createAppStructure()
     this.startPreloadingHomePage()
@@ -78,29 +79,38 @@ class App {
   }
 
   async startPreloadingHomePage() {
+    // Only preload homepage if we're actually on the homepage
+    const isHomePage = this.currentPath === "/" || this.currentPath === ""
+
     this.homePagePreloadPromise = new Promise(async (resolve) => {
       try {
         await this.injectCSS()
 
-        const homePath = "/"
-        if (this.cssManager) {
-          await this.cssManager.loadPageStyle(homePath)
-        }
-
-        const routeInfo = routeManager.getRouteInfo(homePath)
-        if (routeInfo && routeInfo.moduleLoader) {
-          const module = await routeInfo.moduleLoader()
-
-          if (module) {
-            const PageClass = Object.values(module)[0]
-            const homePage = new PageClass()
-
-            this.preloadedHomePage = homePage
-            await homePage.prepareRender()
-
-            this.homePageReady = true
-            resolve(true)
+        // If we're on the homepage, preload it
+        if (isHomePage) {
+          const homePath = "/"
+          if (this.cssManager) {
+            await this.cssManager.loadPageStyle(homePath)
           }
+
+          const routeInfo = routeManager.getRouteInfo(homePath)
+          if (routeInfo && routeInfo.moduleLoader) {
+            const module = await routeInfo.moduleLoader()
+
+            if (module) {
+              const PageClass = Object.values(module)[0]
+              const homePage = new PageClass()
+
+              this.preloadedHomePage = homePage
+              await homePage.prepareRender()
+
+              this.homePageReady = true
+              resolve(true)
+            }
+          }
+        } else {
+          // If we're not on the homepage, don't preload it
+          resolve(false)
         }
       } catch (error) {
         console.warn("Home page preloading error:", error)
@@ -137,8 +147,11 @@ class App {
     try {
       await this.homePagePreloadPromise
 
+      // Only use preloaded homepage if we're actually on the homepage
+      const isHomePage = this.currentPath === "/" || this.currentPath === ""
       const pageContent = document.getElementById("page-content")
-      if (pageContent && this.homePageReady && this.preloadedHomePage) {
+
+      if (pageContent && this.homePageReady && this.preloadedHomePage && isHomePage) {
         pageContent.innerHTML = ""
         this.preloadedHomePage.container = pageContent
         await this.preloadedHomePage.finalizeRender()
