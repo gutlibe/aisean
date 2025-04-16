@@ -654,7 +654,7 @@
 }
 [data-theme="dark"] {
   --skeleton-color: rgba(255, 255, 255, 0.15);
-  --skeleton-color-highlight: rgba(255, 255, 255, 0.08);
+  --skeleton-color-highlight: rgba(255, 255, 255, 0.2);
 }
 [data-theme="blue"], 
 [data-theme="green"] {
