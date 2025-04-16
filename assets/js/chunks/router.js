@@ -133,9 +133,8 @@ export default class Router {
   }
 
   async cacheModule(path) {
-    // Extract pathname from path (which might include query params)
     const pathname = this.extractPathname(path)
-    
+
     if (!this.moduleCache.has(pathname)) {
       try {
         const routeInfo = routeManager.getRouteInfo(pathname)
@@ -151,9 +150,8 @@ export default class Router {
   }
 
   cachePageInstance(path, pageInstance) {
-    // Extract pathname from path (which might include query params)
     const pathname = this.extractPathname(path)
-    
+
     const existingPage = this.pageCache.get(pathname)
     if (existingPage && typeof existingPage.destroy === "function" && existingPage !== pageInstance) {
       try {
@@ -167,7 +165,6 @@ export default class Router {
   }
 
   getCachedPageInstance(path) {
-    // Extract pathname from path (which might include query params)
     const pathname = this.extractPathname(path)
     return this.pageCache.get(pathname)
   }
@@ -189,19 +186,33 @@ export default class Router {
 
   async handleInitialRoute(path) {
     try {
-      // Extract pathname from path (which might include query params)
       const pathname = this.extractPathname(path)
-      
+
       if (pathname.includes("index.html")) {
         const newPath = this.defaultPath + this.extractQueryString(path)
         window.history.replaceState({}, "", newPath)
         path = newPath
       }
 
-      if (window.app?.preloadedHomePage && (pathname === "/" || pathname === "")) {
-        return
+      // Only use preloaded homepage if we're actually on the homepage
+      const isHomePage = pathname === "/" || pathname === ""
+      if (window.app?.preloadedHomePage && isHomePage) {
+        // Use the preloaded homepage
+        const contentContainer = document.getElementById("page-content")
+        if (contentContainer && window.app.preloadedHomePage) {
+          contentContainer.innerHTML = ""
+          window.app.preloadedHomePage.container = contentContainer
+          await window.app.preloadedHomePage.finalizeRender()
+          this.currentPage = window.app.preloadedHomePage
+          this.currentPath = "/"
+          this.updateMenuState("/")
+          this.isNavigating = false
+          this.hideNavigationIndicator()
+          return
+        }
       }
 
+      // For non-homepage routes or if preloaded homepage isn't available
       if (routeManager.isValidRoute(pathname)) {
         this.currentPath = path
         await this.handleRoute(null, true)
@@ -421,27 +432,9 @@ export default class Router {
       return
     }
 
-    // Handle youare parameter specially
-    const youAreParam = this.extractYouAreParam(path)
-    
     // Preserve existing query parameters if not included in the new path
-    if (!path.includes('?') && window.location.search) {
-      // Only preserve non-youare parameters if youare is in the new path
-      if (youAreParam) {
-        const currentParams = new URLSearchParams(window.location.search)
-        currentParams.delete('youare')
-        const preservedParams = currentParams.toString()
-        if (preservedParams) {
-          path = `${path}${path.includes('?') ? '&' : '?'}${preservedParams}`
-        }
-      } else {
-        path = `${path}${window.location.search}`
-      }
-    }
-    
-    // Add youare parameter if it exists
-    if (youAreParam) {
-      path = `${path}${path.includes('?') ? '&' : '?'}youare=${youAreParam}`
+    if (!path.includes("?") && window.location.search) {
+      path = `${path}${window.location.search}`
     }
 
     const currentUrl = window.location.pathname + window.location.search + window.location.hash
@@ -459,13 +452,15 @@ export default class Router {
 
     const contentContainer = document.getElementById("page-content")
     if (contentContainer && !contentContainer.querySelector(".skeleton-container")) {
-      this.cacheModule(modulePath).then(module => {
-        if (module) {
-          const PageClass = Object.values(module)[0]
-          const tempPage = new PageClass()
-          contentContainer.innerHTML = tempPage.getSkeletonTemplate()
-        }
-      }).catch(err => console.warn("Failed to show skeleton:", err))
+      this.cacheModule(modulePath)
+        .then((module) => {
+          if (module) {
+            const PageClass = Object.values(module)[0]
+            const tempPage = new PageClass()
+            contentContainer.innerHTML = tempPage.getSkeletonTemplate()
+          }
+        })
+        .catch((err) => console.warn("Failed to show skeleton:", err))
     }
 
     this.prepareNewPage(path, modulePath, routeInfo)
@@ -489,32 +484,16 @@ export default class Router {
       })
   }
 
-  // Helper method to extract pathname from a path that might include query parameters
   extractPathname(path) {
     if (!path) return "/"
-    const questionMarkIndex = path.indexOf('?')
+    const questionMarkIndex = path.indexOf("?")
     return questionMarkIndex >= 0 ? path.substring(0, questionMarkIndex) : path
   }
-  
-  // Helper method to extract query string from a path
+
   extractQueryString(path) {
     if (!path) return ""
-    const questionMarkIndex = path.indexOf('?')
+    const questionMarkIndex = path.indexOf("?")
     return questionMarkIndex >= 0 ? path.substring(questionMarkIndex) : ""
-  }
-  
-  // Helper method to extract youare parameter from a path or from current URL
-  extractYouAreParam(path) {
-    // Check if youare parameter is in the provided path
-    const urlObj = new URL(path, window.location.origin)
-    let youAreParam = urlObj.searchParams.get('youare')
-    
-    // If not in the provided path, check if it's in the current URL
-    if (!youAreParam) {
-      youAreParam = new URLSearchParams(window.location.search).get('youare')
-    }
-    
-    return youAreParam
   }
 
   getUnauthorizedRedirectPath() {
