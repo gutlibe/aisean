@@ -29,11 +29,11 @@ export default class Router {
 
     if (document.readyState === "loading") {
       window.addEventListener("DOMContentLoaded", () => {
-        const initialPath = window.location.pathname
+        const initialPath = window.location.pathname + window.location.search
         this.handleInitialRoute(initialPath)
       })
     } else {
-      const initialPath = window.location.pathname
+      const initialPath = window.location.pathname + window.location.search
       this.handleInitialRoute(initialPath)
     }
 
@@ -133,22 +133,28 @@ export default class Router {
   }
 
   async cacheModule(path) {
-    if (!this.moduleCache.has(path)) {
+    // Extract pathname from path (which might include query params)
+    const pathname = this.extractPathname(path)
+    
+    if (!this.moduleCache.has(pathname)) {
       try {
-        const routeInfo = routeManager.getRouteInfo(path)
+        const routeInfo = routeManager.getRouteInfo(pathname)
         if (routeInfo && routeInfo.moduleLoader) {
           const module = await routeInfo.moduleLoader()
-          this.moduleCache.set(path, module)
+          this.moduleCache.set(pathname, module)
         }
       } catch (error) {
-        console.warn(`Failed to cache module for path ${path}:`, error)
+        console.warn(`Failed to cache module for path ${pathname}:`, error)
       }
     }
-    return this.moduleCache.get(path)
+    return this.moduleCache.get(pathname)
   }
 
   cachePageInstance(path, pageInstance) {
-    const existingPage = this.pageCache.get(path)
+    // Extract pathname from path (which might include query params)
+    const pathname = this.extractPathname(path)
+    
+    const existingPage = this.pageCache.get(pathname)
     if (existingPage && typeof existingPage.destroy === "function" && existingPage !== pageInstance) {
       try {
         existingPage.destroy()
@@ -157,11 +163,13 @@ export default class Router {
       }
     }
 
-    this.pageCache.set(path, pageInstance)
+    this.pageCache.set(pathname, pageInstance)
   }
 
   getCachedPageInstance(path) {
-    return this.pageCache.get(path)
+    // Extract pathname from path (which might include query params)
+    const pathname = this.extractPathname(path)
+    return this.pageCache.get(pathname)
   }
 
   addRoute(path, moduleLoader) {
@@ -181,16 +189,20 @@ export default class Router {
 
   async handleInitialRoute(path) {
     try {
-      if (path.includes("index.html")) {
-        path = this.defaultPath
-        window.history.replaceState({}, "", path)
+      // Extract pathname from path (which might include query params)
+      const pathname = this.extractPathname(path)
+      
+      if (pathname.includes("index.html")) {
+        const newPath = this.defaultPath + this.extractQueryString(path)
+        window.history.replaceState({}, "", newPath)
+        path = newPath
       }
 
-      if (window.app?.preloadedHomePage && (path === "/" || path === "")) {
+      if (window.app?.preloadedHomePage && (pathname === "/" || pathname === "")) {
         return
       }
 
-      if (routeManager.isValidRoute(path)) {
+      if (routeManager.isValidRoute(pathname)) {
         this.currentPath = path
         await this.handleRoute(null, true)
       } else {
@@ -220,7 +232,8 @@ export default class Router {
     this.showNavigationIndicator()
 
     try {
-      const path = window.location.pathname
+      const path = window.location.pathname + window.location.search
+      const pathname = this.extractPathname(path)
 
       if (path === this.currentPath && !isInitial && window.location.href === window.history.state?.url) {
         this.isNavigating = false
@@ -228,8 +241,8 @@ export default class Router {
         return
       }
 
-      const routeExists = routeManager.isValidRoute(path)
-      const targetPath = routeExists ? path : "/404"
+      const routeExists = routeManager.isValidRoute(pathname)
+      const targetPath = routeExists ? pathname : "/404"
 
       const routeInfo = routeManager.getRouteInfo(targetPath)
       const modulePath = routeInfo && routeInfo.isNestedRoute ? routeInfo.path : targetPath
@@ -250,7 +263,7 @@ export default class Router {
           cachedPage.fullPath = path
 
           await cachedPage.finalizeRender()
-          this.updateMenuState(path)
+          this.updateMenuState(pathname)
           this.isNavigating = false
           this.hideNavigationIndicator()
           return
@@ -296,7 +309,7 @@ export default class Router {
       }
 
       if (window.app?.cssManager) {
-        await window.app.cssManager.loadPageStyle(path)
+        await window.app.cssManager.loadPageStyle(this.extractPathname(path))
       }
 
       const PageClass = Object.values(module)[0]
@@ -339,7 +352,7 @@ export default class Router {
 
       await newPage.finalizeRender()
 
-      this.updateMenuState(path)
+      this.updateMenuState(this.extractPathname(path))
     } catch (error) {
       console.error("Navigation finalization error:", error)
       if (window.location.pathname !== "/404") {
@@ -408,14 +421,38 @@ export default class Router {
       return
     }
 
+    // Handle youare parameter specially
+    const youAreParam = this.extractYouAreParam(path)
+    
+    // Preserve existing query parameters if not included in the new path
+    if (!path.includes('?') && window.location.search) {
+      // Only preserve non-youare parameters if youare is in the new path
+      if (youAreParam) {
+        const currentParams = new URLSearchParams(window.location.search)
+        currentParams.delete('youare')
+        const preservedParams = currentParams.toString()
+        if (preservedParams) {
+          path = `${path}${path.includes('?') ? '&' : '?'}${preservedParams}`
+        }
+      } else {
+        path = `${path}${window.location.search}`
+      }
+    }
+    
+    // Add youare parameter if it exists
+    if (youAreParam) {
+      path = `${path}${path.includes('?') ? '&' : '?'}youare=${youAreParam}`
+    }
+
     const currentUrl = window.location.pathname + window.location.search + window.location.hash
     if (path === currentUrl) return
 
     this.isNavigating = true
     this.showNavigationIndicator()
 
-    const routeExists = routeManager.isValidRoute(path)
-    const targetPath = routeExists ? path : "/404"
+    const pathname = this.extractPathname(path)
+    const routeExists = routeManager.isValidRoute(pathname)
+    const targetPath = routeExists ? pathname : "/404"
 
     const routeInfo = routeManager.getRouteInfo(targetPath)
     const modulePath = routeInfo && routeInfo.isNestedRoute ? routeInfo.path : targetPath
@@ -450,6 +487,34 @@ export default class Router {
         this.isNavigating = false
         this.hideNavigationIndicator()
       })
+  }
+
+  // Helper method to extract pathname from a path that might include query parameters
+  extractPathname(path) {
+    if (!path) return "/"
+    const questionMarkIndex = path.indexOf('?')
+    return questionMarkIndex >= 0 ? path.substring(0, questionMarkIndex) : path
+  }
+  
+  // Helper method to extract query string from a path
+  extractQueryString(path) {
+    if (!path) return ""
+    const questionMarkIndex = path.indexOf('?')
+    return questionMarkIndex >= 0 ? path.substring(questionMarkIndex) : ""
+  }
+  
+  // Helper method to extract youare parameter from a path or from current URL
+  extractYouAreParam(path) {
+    // Check if youare parameter is in the provided path
+    const urlObj = new URL(path, window.location.origin)
+    let youAreParam = urlObj.searchParams.get('youare')
+    
+    // If not in the provided path, check if it's in the current URL
+    if (!youAreParam) {
+      youAreParam = new URLSearchParams(window.location.search).get('youare')
+    }
+    
+    return youAreParam
   }
 
   getUnauthorizedRedirectPath() {
