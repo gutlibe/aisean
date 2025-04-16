@@ -1,21 +1,18 @@
-import { AuthManager } from "./utils/pg-auth.js"
+ import { AuthManager } from "./utils/pg-auth.js"
 
 export class Page {
   constructor() {
-    // Basic configuration
-    this.container = null // Initialize as null, will be set during render
+    this.container = null
     this.showMenuIcon = true
     this.showBackArrow = false
     this.requiresDatabase = false
 
-    // CSS configuration
-    this.cssFiles = [] // Array of CSS files to load for this page
-    this.baseCssPath = "/assets/css/" // Base path for CSS files
+    this.cssFiles = []
+    this.baseCssPath = "/assets/css/"
 
-    // Auth related settings
     this.requiresAuth = false
-    this.authorizedUserTypes = [] // e.g. ['Admin', 'Agent']
-    this.unauthorizedRedirectPath = null // Custom path to redirect unauthorized users
+    this.authorizedUserTypes = []
+    this.unauthorizedRedirectPath = null
     this.loginButton = null
     this.profileAvatar = null
     this.showProfileAvatar = false
@@ -25,71 +22,69 @@ export class Page {
     this.authListener = null
     this.authData = null
 
-    // Initialize AuthManager
     this.authManager = new AuthManager(this)
 
-    // Loading states
-    this.loadingState = "initial" // initial -> auth -> structure -> content -> complete
+    this.loadingState = "initial"
     this.loadingTimeout = 30000
     this.loadingTimer = null
     this.databaseLoadPromise = null
 
-    // Configuration options
     this.maxRetries = 2
     this.retryDelay = 1000
     this.currentRenderAttempt = 0
     this.latestRenderTimestamp = 0
     this.temporaryErrorMessage = null
 
-    // Navigation
     this.navigationAbortController = null
     this.preparedHeader = null
     this.preparedSkeleton = null
+    this.headerSkeletonElement = null
 
-    // Bind methods to ensure proper 'this' context
     this.handleLoginClick = this.handleLoginClick.bind(this)
     this.handleUpgradeClick = this.handleUpgradeClick.bind(this)
     this.handlePremiumClick = this.handlePremiumClick.bind(this)
     this.handleProfileClick = this.handleProfileClick.bind(this)
 
-    // Bind and debounce resize handler
     this.handleResize = this.debounce(this.onResize.bind(this), 200)
   }
 
-  // Method to load CSS for this page
   async loadPageCSS() {
-    if (!window.app?.cssManager) {
-      console.warn("CSS Manager not available, skipping CSS loading")
-      return false
-    }
-
-    const cssManager = window.app.cssManager
-    const promises = []
-
-    // Load all CSS files specified for this page
-    if (this.cssFiles && this.cssFiles.length > 0) {
-      for (const cssFile of this.cssFiles) {
-        // Handle absolute paths (starting with /)
-        if (cssFile.startsWith("/")) {
-          promises.push(cssManager.loadCSS(cssFile))
-        }
-        // Handle relative paths
-        else {
-          promises.push(cssManager.loadCSS(`${this.baseCssPath}${cssFile}`))
-        }
+  if (!window.app?.cssManager) {
+    console.warn("CSS Manager not available. Cannot load page-specific CSS.")
+    return false
+  }
+  
+  const cssManager = window.app.cssManager
+  const promises = []
+  
+  // --- Removed Header Skeleton CSS Loading ---
+  // The responsibility of loading '/assets/css/header-skeleton.css'
+  // is now handled outside this Page class. Ensure it's loaded globally
+  // or by the main application setup.
+  // promises.push(cssManager.loadCSS("/assets/css/header-skeleton.css")) // <-- This line is removed
+  
+  // Load page-specific CSS files
+  if (this.cssFiles && this.cssFiles.length > 0) {
+    for (const cssFile of this.cssFiles) {
+      if (cssFile.startsWith("/")) {
+        promises.push(cssManager.loadCSS(cssFile))
+      } else {
+        promises.push(cssManager.loadCSS(`${this.baseCssPath}${cssFile}`))
       }
     }
-
-    try {
-      await Promise.all(promises)
-      return true
-    } catch (error) {
-      console.error("Failed to load page CSS:", error)
-      return false
-    }
   }
+  
+  try {
+    await Promise.all(promises)
+    // console.log("Page specific CSS loaded successfully.");
+    return true
+  } catch (error) {
+    console.error("Failed to load page CSS:", error)
+    return false
+  }
+}
 
-  // Debounce utility function to limit frequency of function calls
+
   debounce(func, delay) {
     let timeout
     return function (...args) {
@@ -98,7 +93,6 @@ export class Page {
     }
   }
 
-  // Called when the window is resized; update header actions
   onResize() {
     this.updateHeaderActions()
   }
@@ -140,7 +134,6 @@ export class Page {
         </div>`
   }
 
-  // Generate a gradient color based on user's name
   _generateGradient(username) {
     const hash = username.split("").reduce((acc, char) => {
       return char.charCodeAt(0) + ((acc << 5) - acc)
@@ -150,7 +143,6 @@ export class Page {
     return `linear-gradient(135deg, hsl(${hue1}, 70%, 60%), hsl(${hue2}, 70%, 50%))`
   }
 
-  // Create profile avatar template
   _profileAvatarTemplate(username) {
     if (!username) return ""
     const firstLetter = username.charAt(0).toUpperCase()
@@ -164,10 +156,8 @@ export class Page {
 
   showRetryPrompt(message) {
     this.hideRetryPrompt()
-    // Safely check if container exists before attempting to use it
     if (!this.container) return
 
-    // Try appending to page-content-wrapper first, then container
     const targetElement = this.container.querySelector("#page-content-wrapper") || this.container
     if (targetElement) {
       targetElement.insertAdjacentHTML("beforeend", this._errorWithRetryTemplate(message))
@@ -182,7 +172,6 @@ export class Page {
   }
 
   hideRetryPrompt() {
-    // Safely check if container exists before attempting to use it
     if (!this.container) return
 
     const retryPrompt = this.container.querySelector(".temporary-error")
@@ -191,7 +180,40 @@ export class Page {
     }
   }
 
-  // Default skeleton template - can be overridden by subclasses
+  getHeaderSkeletonTemplate() {
+    // Determine which elements to show based on page configuration
+    const showMenuToggle = this.showMenuIcon ? `<div class="skeleton-menu-toggle pulse"></div>` : ''
+    const showBackArrow = this.showBackArrow ? `<div class="skeleton-back-arrow pulse"></div>` : ''
+    
+    // Determine if we need action buttons
+    let actionButtons = ''
+    if (this.showUpgradeButton) {
+      actionButtons += `<div class="skeleton-action-button pulse"></div>`
+    }
+    
+    if (!this.requiresAuth) {
+      actionButtons += `<div class="skeleton-action-button pulse"></div>`
+    }
+    
+    // Profile avatar if needed
+    const profileAvatar = this.showProfileAvatar ? 
+      `<div class="skeleton-profile-avatar pulse"></div>` : ''
+    
+    return `
+      <div class="skeleton-header-container">
+        <div class="skeleton-header-content">
+          ${showMenuToggle}
+          ${showBackArrow}
+          <div class="skeleton-title pulse"></div>
+          <div class="skeleton-actions">
+            ${actionButtons}
+            ${profileAvatar}
+          </div>
+        </div>
+      </div>
+    `
+  }
+
   getSkeletonTemplate() {
     return `
       <div class="skeleton-container">
@@ -205,12 +227,36 @@ export class Page {
     `
   }
 
-  // Prepare render method - separates preparation from DOM manipulation
+  showHeaderSkeleton() {
+    // Remove any existing header skeleton
+    this.hideHeaderSkeleton()
+    
+    // Create and append the header skeleton
+    const headerSkeleton = document.createElement('div')
+    headerSkeleton.id = 'header-skeleton-container'
+    headerSkeleton.innerHTML = this.getHeaderSkeletonTemplate()
+    document.body.appendChild(headerSkeleton)
+    
+    this.headerSkeletonElement = headerSkeleton
+  }
+  
+  hideHeaderSkeleton() {
+    // Remove the header skeleton if it exists
+    if (this.headerSkeletonElement) {
+      this.headerSkeletonElement.remove()
+      this.headerSkeletonElement = null
+    } else {
+      const existingSkeleton = document.getElementById('header-skeleton-container')
+      if (existingSkeleton) {
+        existingSkeleton.remove()
+      }
+    }
+  }
+
   async prepareRender() {
     const renderTimestamp = Date.now()
     this.latestRenderTimestamp = renderTimestamp
 
-    // Create a new abort controller for this navigation
     if (this.navigationAbortController) {
       this.navigationAbortController.abort("New navigation started")
     }
@@ -223,10 +269,11 @@ export class Page {
     try {
       if (signal.aborted) throw new Error("NAVIGATION_INTERRUPTED")
 
-      // Load page-specific CSS first
+      // Show header skeleton immediately
+      this.showHeaderSkeleton()
+
       await this.loadPageCSS()
 
-      // Prepare skeleton immediately so it's ready when needed
       this.preparedSkeleton = this.getSkeletonTemplate()
 
       this.loadingState = "auth"
@@ -234,7 +281,6 @@ export class Page {
       this.authData = authResult.authData
 
       if (authResult.pending) {
-        console.log("Auth still initializing, proceeding with render but will re-verify later")
         setTimeout(() => {
           if (this.latestRenderTimestamp === renderTimestamp) {
             this.authManager.recheckAuth(renderTimestamp)
@@ -251,10 +297,8 @@ export class Page {
 
       if (signal.aborted) throw new Error("NAVIGATION_INTERRUPTED")
 
-      // Prepare header after auth check
       this.preparedHeader = this.getPageHeader()
 
-      // Return true to indicate preparation is complete
       return true
     } catch (error) {
       console.error("Prepare render error:", error)
@@ -262,41 +306,35 @@ export class Page {
     }
   }
 
-  // Finalize render method - handles DOM manipulation
   async finalizeRender() {
     try {
-      // Ensure container exists
       this.container = document.getElementById("page-content")
       if (!this.container) {
         throw new Error("Page container not found")
       }
 
       if (!this.preparedHeader || !this.preparedSkeleton) {
-        // If preparation failed or wasn't called, fallback to regular render
         return this.render()
       }
 
-      // Create a temporary container for the new content
       const tempContainer = document.createElement("div")
-      // Render header and skeleton immediately using prepared content
       tempContainer.innerHTML =
         this.preparedHeader + `<div id="page-content-wrapper">${this.preparedSkeleton || ""}</div>`
 
-      // Replace the container content
       this.container.innerHTML = tempContainer.innerHTML
 
-      // Now that we have content, we can hide any retry prompts
+      // Hide header skeleton after real header is rendered
+      this.hideHeaderSkeleton()
+
       this.hideRetryPrompt()
 
       await this.afterStructureRender()
       this.loadingState = "structure"
 
-      // Continue with database loading if needed
       if (this.requiresDatabase && this.loadDatabaseContent) {
         this.startLoadingTimer()
         try {
           if (!this.authData.firebase?.firestore) {
-            console.log("Firebase not ready, waiting before loading database content")
             await new Promise((resolve) => setTimeout(resolve, 500))
             if (!window.app?.getLibrary("firebase")?.firestore) {
               throw new Error("DATABASE_ERROR: Firebase not initialized")
@@ -315,17 +353,14 @@ export class Page {
 
       if (this.navigationAbortController.signal.aborted) throw new Error("NAVIGATION_INTERRUPTED")
 
-      // Continue with content rendering
       const contentWrapper = this.container.querySelector("#page-content-wrapper")
       if (contentWrapper) {
         this.loadingState = "content"
         const content = await this.getContent()
         if (!this.navigationAbortController.signal.aborted) {
-          // Create a temporary element to hold the new content
           const tempElement = document.createElement("div")
           tempElement.innerHTML = content
 
-          // Replace skeleton/content in the wrapper
           contentWrapper.innerHTML = tempElement.innerHTML
         }
       }
@@ -337,7 +372,6 @@ export class Page {
       this.loadingState = "complete"
       this.currentRenderAttempt = 0
 
-      // Clear prepared content references
       this.preparedHeader = null
       this.preparedSkeleton = null
     } catch (error) {
@@ -346,7 +380,6 @@ export class Page {
     }
   }
 
-  // Legacy render method - now uses the two-phase rendering approach
   async render() {
     try {
       await this.prepareRender()
@@ -359,8 +392,10 @@ export class Page {
 
   async handleRenderError(error) {
     this.clearLoadingTimer()
+    
+    // Make sure to hide the header skeleton on error
+    this.hideHeaderSkeleton()
 
-    // Ensure container exists
     if (!this.container) {
       this.container = document.getElementById("page-content")
       if (!this.container) {
@@ -407,7 +442,6 @@ export class Page {
 
     if (!["AUTH_ERROR", "UNAUTHORIZED"].includes(errorType)) {
       const canRetry = ["NETWORK_ERROR", "DATABASE_ERROR", "DATABASE_TIMEOUT"].includes(errorType)
-      // Replace the entire page container content with the error state
       this.container.innerHTML = this._errorTemplate(errorType, canRetry)
 
       if (canRetry) {
@@ -419,10 +453,8 @@ export class Page {
         this.container.addEventListener("retryRender", retryHandler)
       }
     } else if (errorType === "AUTH_ERROR") {
-      console.log("Redirecting to login due to AUTH_ERROR")
       window.location.replace("/login")
     } else if (errorType === "UNAUTHORIZED") {
-      console.log("Redirecting to unauthorized path due to UNAUTHORIZED")
       const redirectPath = window.app.router.getUnauthorizedRedirectPath()
       window.app.navigateTo(redirectPath)
     }
@@ -546,7 +578,6 @@ export class Page {
   }
 
   handleUpgradeClick() {
-    console.log("Upgrade button clicked")
     if (window.app) {
       window.app.navigateTo("/pricing")
     } else {
@@ -555,7 +586,6 @@ export class Page {
   }
 
   handlePremiumClick() {
-    console.log("Premium button clicked")
     if (window.app) {
       window.app.navigateTo("/premium")
     } else {
@@ -579,7 +609,6 @@ export class Page {
   updateHeaderActions() {
     if (!this.container) return
 
-    // Update login button
     if (!this.requiresAuth) {
       const loginBtn = this.container.querySelector("#loginBtn")
       if (loginBtn && !this.loginButton) {
@@ -588,7 +617,6 @@ export class Page {
       }
     }
 
-    // Update upgrade button
     if (this.showUpgradeButton) {
       const upgradeBtn = this.container.querySelector("#upgradeBtn")
       if (upgradeBtn && !this.upgradeButton) {
@@ -603,7 +631,6 @@ export class Page {
       }
     }
 
-    // Update profile avatar
     if (this.showProfileAvatar && this.authData?.user) {
       const profileContainer = this.container.querySelector(".profile-container")
       if (profileContainer) {
@@ -617,7 +644,6 @@ export class Page {
       }
     }
 
-    // Update back arrow
     if (this.showBackArrow) {
       const backArrow = this.container.querySelector(".back-arrow")
       if (backArrow) {
@@ -631,7 +657,6 @@ export class Page {
       }
     }
 
-    // Update menu toggle
     if (this.showMenuIcon) {
       const menuToggle = this.container.querySelector(".menu-toggle")
       if (menuToggle) {
@@ -670,25 +695,23 @@ export class Page {
   }
 
   destroy() {
-    // Clean up event listeners
     window.removeEventListener("resize", this.handleResize)
 
-    // Clean up auth listener
     if (this.authListener) {
       this.authListener()
       this.authListener = null
     }
 
-    // Clean up navigation controller
     if (this.navigationAbortController) {
       this.navigationAbortController.abort()
       this.navigationAbortController = null
     }
 
-    // Clean up timers
     this.clearLoadingTimer()
+    
+    // Make sure to clean up the header skeleton
+    this.hideHeaderSkeleton()
 
-    // Clean up references
     this.container = null
     this.loginButton = null
     this.upgradeButton = null
