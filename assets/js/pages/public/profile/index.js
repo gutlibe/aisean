@@ -5,36 +5,38 @@ import { Page } from "../../../core/page.js"
  *
  * Displays user information from Firestore and provides
  * logout functionality.
+ * 
+ * This version is updated to work with the multi-render architecture.
  */
 export class ProfilePage extends Page {
   constructor() {
     super()
-
+    
     this.showMenuIcon = false
     this.showBackArrow = true
     this.requiresDatabase = true
     this.requiresAuth = true
     this.authorizedUserTypes = [] // Empty array = no restrictions
-
+    
     this.showProfileAvatar = false
     this.loadingTimeout = 15000 // 15 seconds
     this.maxRetries = 2
     this.retryDelay = 1000
     this.isLoggingOut = false
-
+    
     this.cssFiles = [
       "pages/public/profile/index.css",
     ]
   }
-
+  
   getTitle() {
     return "Profile"
   }
-
+  
   getHeaderIcon() {
     return "fas fa-user"
   }
-
+  
   getSkeletonTemplate() {
     return `
             <div class="pfp-skeleton-container">
@@ -51,18 +53,18 @@ export class ProfilePage extends Page {
             </div>
         `
   }
-
+  
   async loadDatabaseContent() {
     try {
       const firebase = window.app.getLibrary("firebase")
       const userId = this.getUserData()?.uid
-
+      
       if (!userId) {
         throw new Error("User not authenticated")
       }
-
+      
       const userDoc = await firebase.getDoc(firebase.doc(firebase.firestore, `users/${userId}`))
-
+      
       if (userDoc.exists()) {
         this.userData = {
           id: userDoc.id,
@@ -77,7 +79,7 @@ export class ProfilePage extends Page {
       throw new Error("DATABASE_ERROR")
     }
   }
-
+  
   getUserTypeDisplay(userType) {
     const typeMap = {
       Member: "Enthusiast",
@@ -87,7 +89,7 @@ export class ProfilePage extends Page {
     }
     return typeMap[userType] || "Fan"
   }
-
+  
   formatDate(timestamp) {
     if (!timestamp || !timestamp.toDate) return "N/A"
     const date = timestamp.toDate()
@@ -97,7 +99,7 @@ export class ProfilePage extends Page {
       day: "numeric",
     })
   }
-
+  
   async getContent() {
     if (!this.userData) {
       return `
@@ -111,18 +113,18 @@ export class ProfilePage extends Page {
                 </div>
             `
     }
-
+    
     const firstLetter = this.userData.username ? this.userData.username.charAt(0).toUpperCase() : "?"
-
+    
     const statusClass = this.userData.status === "active" ? "pfp-status-active" : "pfp-status-inactive"
-
+    
     const userTypeDisplay = this.getUserTypeDisplay(this.userData.userType)
     const createdAtFormatted = this.formatDate(this.userData.createdAt)
-
-    const logoutBtnContent = this.isLoggingOut
-      ? '<i class="fas fa-spinner fa-spin"></i> Signing Out...'
-      : '<i class="fas fa-sign-out-alt"></i> Log Out'
-
+    
+    const logoutBtnContent = this.isLoggingOut ?
+      '<i class="fas fa-spinner fa-spin"></i> Signing Out...' :
+      '<i class="fas fa-sign-out-alt"></i> Log Out'
+    
     return `
             <div class="pfp-container">
                 <div class="pfp-avatar-section">
@@ -163,54 +165,66 @@ export class ProfilePage extends Page {
             </div>
         `
   }
-
+  
   async afterContentRender() {
     const logoutBtn = this.container.querySelector("#pfp-logout-btn")
     if (logoutBtn && !this.isLoggingOut) {
       logoutBtn.addEventListener("click", () => this.handleLogout())
     }
-
+    
     const retryBtn = this.container.querySelector("#pfp-retry-btn")
     if (retryBtn) {
       retryBtn.addEventListener("click", () => this.refresh())
     }
   }
-
+  
   async handleLogout() {
     if (this.isLoggingOut) return
-
+    
     try {
       const firebase = window.app.getLibrary("firebase")
-
+      
       // Set logging out state
       this.isLoggingOut = true
-
+      
       // Re-render to show the spinner
-      await this.render()
-
+      const contentWrapper = this.container.querySelector("#page-content-wrapper")
+      if (contentWrapper) {
+        const content = await this.getContent()
+        contentWrapper.innerHTML = content
+        await this.afterContentRender()
+      }
+      
       // Perform the logout
       await firebase.signOut(firebase.auth)
-
+      
       // Show success notification
       window.app.showToast("You have been logged out successfully", "success")
-
+      
       // Delay for 3 seconds before redirecting for smoother UX
       await new Promise((resolve) => setTimeout(resolve, 3000))
-
+      
       // Redirect to login page using location
       window.location.href = "/login"
     } catch (error) {
       console.error("Logout error:", error)
-
+      
       // Reset logging out state on error
       this.isLoggingOut = false
-      await this.render()
-
+      
+      // Update the content to reflect the error state
+      const contentWrapper = this.container.querySelector("#page-content-wrapper")
+      if (contentWrapper) {
+        const content = await this.getContent()
+        contentWrapper.innerHTML = content
+        await this.afterContentRender()
+      }
+      
       // Show error notification
       window.app.showToast("Failed to log out. Please try again.", "error")
     }
   }
-
+  
   escapeHtml(unsafe) {
     if (!unsafe) return ""
     return unsafe
@@ -221,12 +235,12 @@ export class ProfilePage extends Page {
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#039;")
   }
-
+  
   refresh() {
     this.currentRenderAttempt = 0
     this.render()
   }
-
+  
   destroy() {
     super.destroy()
     this.userData = null
@@ -234,5 +248,3 @@ export class ProfilePage extends Page {
     this.isLoggingOut = false
   }
 }
-
-

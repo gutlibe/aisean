@@ -1,8 +1,11 @@
+
 # Page Template Documentation
 
 ## Overview
 
 This document provides a comprehensive guide for creating new pages in the application using the vanilla JavaScript architecture. Pages are created by extending the base `Page` class and implementing specific methods to define content, behavior, and appearance.
+
+The application now uses a **multi-render approach** that separates the rendering process into distinct phases for better performance and user experience.
 
 ## File Structure and Import
 
@@ -34,6 +37,27 @@ import { Page } from '../../../core/page.js';
 export class YourPageName extends Page {
     // Page implementation
 }
+
+
+
+1. `Page Template.md` - A comprehensive documentation file explaining how to create pages in the application using the vanilla JavaScript architecture. It details the page lifecycle, required methods, CSS management, database interactions, and more.
+2. `router.js` - A router implementation that handles navigation between pages, including caching, loading indicators, and error handling.
+3. `css-manager.js` - A class that manages CSS loading and unloading for different pages and components.
+4. `page.js` - The base Page class that all pages extend from. It handles the page lifecycle, rendering, authentication, and more.
+5. `profile-page.js` - An example implementation of a profile page that extends the base Page class.
+
+
+The documentation mentions that the architecture has changed from a single render approach to a multi-render approach, and the user wants me to analyze these changes and update the documentation accordingly. The main changes appear to be in how pages are rendered, with a new approach that separates the rendering process into multiple phases (structure rendering, content rendering, etc.).
+
+I'll need to update the Page Template documentation to reflect these changes and provide a clear guide on how to create pages using the new multi-render approach.
+`</Thinking>`
+
+### Updated Page Template Documentation
+
+After analyzing the code files you've provided, I can see that the architecture has evolved from a single render approach to a multi-render implementation. Let me update the documentation to reflect these changes and provide a clear guide for creating pages that work with the new architecture.
+
+```markdown project="Page Template Documentation" file="Page-Template-Updated.md"
+...
 ```
 
 ## Basic Page Structure
@@ -76,18 +100,32 @@ export class ExamplePage extends Page {
 
 > **Note:** Authorization settings like `authorizedUserTypes` and `unauthorizedRedirectPath` are now managed in the `routes.js` file, not in individual pages.
 
-## Page Lifecycle
 
-Pages follow a defined lifecycle that manages rendering, data loading, and error handling:
+
+## Multi-Render Page Lifecycle
+
+The updated architecture uses a multi-render approach with the following lifecycle phases:
 
 1. **Initialization**: Constructor sets up configuration
 2. **CSS Loading**: Page-specific CSS is loaded before DOM changes
 3. **Authentication**: User auth state is verified
-4. **Structure Rendering**: Page header and skeleton template are rendered
-5. **Database Loading**: If `requiresDatabase` is true, data is loaded
-6. **Content Rendering**: Main content replaces the skeleton template
-7. **Event Binding**: Event listeners are set up
-8. **Cleanup**: Resources are released when navigating away
+4. **Prepare Render**: Prepares header and skeleton templates
+5. **Structure Rendering**: Page header and skeleton template are rendered
+6. **Database Loading**: If `requiresDatabase` is true, data is loaded
+7. **Content Rendering**: Main content replaces the skeleton template
+8. **Event Binding**: Event listeners are set up
+9. **Cleanup**: Resources are released when navigating away
+
+
+### Key Lifecycle Methods
+
+The multi-render approach introduces two main phases:
+
+1. **`prepareRender()`**: Prepares the page for rendering (loads CSS, verifies auth, prepares templates)
+2. **`finalizeRender()`**: Renders the prepared templates and loads content
+
+
+These methods are called by the router and should not be overridden in most cases. Instead, implement the required methods described below.
 
 ## Required Methods
 
@@ -343,17 +381,17 @@ constructor() {
 ```
 
 The CSS manager will:
+
 1. Load these files before rendering the page
 2. Prevent Flash of Unstyled Content (FOUC) during page transitions
 3. Clean up old page styles when navigating away
 
+
 ## Database Interaction
 
-### Firestore Database
+### loadDatabaseContent()
 
-Firestore is used for structured data that requires complex queries and transactions.
-
-#### Loading Data from Firestore
+This method is called during the render lifecycle if `requiresDatabase` is set to `true`. It should load all necessary data from the database and store it as instance properties.
 
 ```javascript
 async loadDatabaseContent() {
@@ -403,6 +441,10 @@ async loadDatabaseContent() {
     }
 }
 ```
+
+### Firestore Database
+
+Firestore is used for structured data that requires complex queries and transactions.
 
 #### Writing Data to Firestore
 
@@ -544,29 +586,6 @@ async saveConfigData(configData) {
 }
 ```
 
-#### Updating Specific Fields in Realtime Database
-
-```javascript
-async updateApiKey(apiKey) {
-    try {
-        const firebase = window.app.getLibrary('firebase');
-        
-        // Create a reference to the specific field
-        const apiKeyRef = firebase.ref(firebase.database, 'configs/PAYSTACK_PUBLIC_KEY');
-        
-        // Update the specific field
-        await firebase.set(apiKeyRef, apiKey);
-        
-        window.app.showToast('API key updated successfully!', 'success');
-        return true;
-    } catch (error) {
-        console.error('Error updating API key:', error);
-        window.app.showToast('Failed to update API key', 'error');
-        return false;
-    }
-}
-```
-
 #### Listening for Real-time Updates
 
 ```javascript
@@ -589,6 +608,7 @@ setupRealtimeListener() {
     });
     
     // Store the listener for cleanup
+    this.listeners = this.listeners || [];
     this.listeners.push(this.pricingListener);
 }
 
@@ -640,6 +660,7 @@ The page system includes built-in error handling:
 2. **Database Errors**: Shown with appropriate messages
 3. **Authentication Errors**: Redirect to login or unauthorized page
 4. **Timeout Errors**: Shown when operations take too long
+
 
 You can also implement custom error handling:
 
@@ -731,9 +752,9 @@ debounce(func, delay) {
 }
 ```
 
-## Complete Example
+## Complete Example: Updated Dashboard Page
 
-Here's a complete example of a dashboard page:
+Here's a complete example of a dashboard page using the multi-render approach:
 
 ```javascript
 import { Page } from '../../../core/page.js';
@@ -993,36 +1014,58 @@ export class DashboardPage extends Page {
 
 ## Best Practices
 
-1. **CSS Naming Conventions**
-   - Use prefixes for class names (e.g., `usr-` for users page)
-   - Be consistent with naming patterns
-   - Use meaningful and descriptive class names
+1. **Multi-Render Approach**
 
-2. **Responsive Design**
-   - Test on multiple screen sizes
-   - Use CSS Grid or Flexbox for layouts
-   - Use media queries for responsive adjustments
-   - Consider touch interactions for mobile devices
+1. Use the `prepareRender()` and `finalizeRender()` lifecycle methods correctly
+2. Implement `getSkeletonTemplate()` to provide a good loading experience
+3. Ensure `getContent()` returns HTML based on loaded data
 
-3. **Error Handling**
-   - Always catch errors in async operations
-   - Provide user-friendly error messages
-   - Use the toast notification system for feedback
-   - Implement retry mechanisms for transient errors
 
-4. **Performance**
-   - Minimize DOM operations
-   - Use efficient database queries
-   - Debounce event handlers for frequent events
-   - Load only necessary CSS files
 
-5. **Security**
-   - Always escape user-generated content with `escapeHtml()`
-   - Verify user permissions before sensitive operations
-   - Don't trust client-side data for critical operations
+2. **CSS Naming Conventions**
 
-6. **Cleanup**
-   - Always implement the `destroy()` method
-   - Remove event listeners when they're no longer needed
-   - Unsubscribe from real-time listeners
-   - Clear references to DOM elements
+1. Use prefixes for class names (e.g., `usr-` for users page)
+2. Be consistent with naming patterns
+3. Use meaningful and descriptive class names
+
+
+
+3. **Responsive Design**
+
+1. Test on multiple screen sizes
+2. Use CSS Grid or Flexbox for layouts
+3. Use media queries for responsive adjustments
+4. Consider touch interactions for mobile devices
+
+
+
+4. **Error Handling**
+
+1. Always catch errors in async operations
+2. Provide user-friendly error messages
+3. Use the toast notification system for feedback
+4. Implement retry mechanisms for transient errors
+
+
+
+5. **Performance**
+
+1. Minimize DOM operations
+2. Use efficient database queries
+3. Debounce event handlers for frequent events
+4. Load only necessary CSS files
+
+
+
+6. **Security**
+
+1. Always escape user-generated content with `escapeHtml()`
+
+
+
+7. **Cleanup**
+
+1. Always implement the `destroy()` method
+2. Remove event listeners when they're no longer needed
+3. Unsubscribe from real-time listeners
+4. Clear references to DOM elements
