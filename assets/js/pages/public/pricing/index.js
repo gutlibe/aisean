@@ -1,48 +1,46 @@
-import { Page } from "../../../core/page.js";
+import { Page } from "../../../core/page.js"
 
 export class PricingPage extends Page {
   constructor() {
-    super();
-    this.showMenuIcon = false;
-    this.showBackArrow = true;
-    this.requiresDatabase = true;
-    this.requiresAuth = false;
-    this.authorizedUserTypes = [];
-    this.isButtonDisabled = false;
-    this.pricingData = null;
-    
-    this.cssFiles = [
-      "pages/public/pricing/index.css",
-    ];
+    super()
+    this.showMenuIcon = false
+    this.showBackArrow = true
+    this.requiresDatabase = true
+    this.requiresAuth = false
+    this.authorizedUserTypes = []
+    this.isButtonDisabled = false
+    this.pricingData = null
+    this.firebase = null
+
+    this.cssFiles = ["pages/public/pricing/index.css"]
+
+    // Bind methods to preserve 'this' context
+    this.handleSubscription = this.handleSubscription.bind(this)
+    this.toggleFAQ = this.toggleFAQ.bind(this)
   }
-  
-  /**
-   * Escape HTML special characters to prevent XSS
-   * @param {string} str - The string to escape
-   * @returns {string} - The escaped string
-   */
+
   escapeHtml(str) {
-    if (!str || typeof str !== 'string') return '';
+    if (!str || typeof str !== "string") return ""
     return str
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;")
   }
-  
+
   getTitle() {
-    return "Premium Pricing";
+    return "Premium Pricing"
   }
-  
+
   getHeaderIcon() {
-    return "fas fa-crown";
+    return "fas fa-crown"
   }
-  
+
   getActions() {
-    return ``;
+    return ``
   }
-  
+
   getSkeletonTemplate() {
     return `
       <div class="pcg-container">
@@ -52,9 +50,9 @@ export class PricingPage extends Page {
           ${this.getSkeletonCard()}
         </div>
       </div>
-    `;
+    `
   }
-  
+
   getSkeletonCard() {
     return `
       <div class="pcg-card skeleton-card">
@@ -68,146 +66,144 @@ export class PricingPage extends Page {
         </div>
         <div class="pcg-button-container skeleton-pulse"></div>
       </div>
-    `;
+    `
   }
-  
-  /**
-   * Load pricing data from Realtime Database
-   */
+
   async loadDatabaseContent() {
     try {
-      const firebase = window.app.getLibrary('firebase');
-      
+      console.log("Starting loadDatabaseContent for pricing page")
+      if (!window.app) {
+        throw new Error("App instance not available")
+      }
+
+      this.firebase = window.app.getLibrary("firebase")
+
+      if (!this.firebase) {
+        throw new Error("Firebase instance not available")
+      }
+
       // Create a reference to the pricing data in Realtime Database
-      const pricingRef = firebase.ref(firebase.database, 'settings/pricing');
-      
+      const pricingRef = this.firebase.ref(this.firebase.database, "settings/pricing")
+
       // Get the data once
-      const snapshot = await firebase.get(pricingRef);
-      
+      const snapshot = await this.firebase.get(pricingRef)
+
       if (snapshot.exists()) {
         // Convert the data to an array for easier manipulation
-        const pricingData = snapshot.val();
-        this.pricingData = this.convertToArray(pricingData);
+        const pricingData = snapshot.val()
+        this.pricingData = this.convertToArray(pricingData)
+        console.log("Loaded pricing data:", this.pricingData)
       } else {
         // Initialize with default values if no data exists
         this.pricingData = [
+          {
+            id: "monthly",
+            name: "Monthly Premium",
+            duration: 30,
+            price: 50,
+            active: true,
+            features: ["All Premium Predictions", "Expert Analysis & Tips", "Access to Upcoming Features"],
+          },
+          {
+            id: "quarterly",
+            name: "Quarterly Premium",
+            duration: 90,
+            price: 120,
+            active: true,
+            features: [
+              "All Premium Predictions",
+              "Expert Analysis & Tips",
+              "Access to Upcoming Features",
+              "Priority Customer Support",
+            ],
+          },
+        ]
+        console.log("Using default pricing data:", this.pricingData)
+      }
+
+      console.log("Completed loadDatabaseContent for pricing page")
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve(true)
+        }, 600)
+      })
+    } catch (error) {
+      console.error("Error loading pricing data:", error)
+      // Fallback to default values if there's an error
+      this.pricingData = [
         {
-          id: 'monthly',
-          name: 'Monthly Premium',
+          id: "monthly",
+          name: "Monthly Premium",
           duration: 30,
           price: 50,
           active: true,
-          features: [
-            'All Premium Predictions',
-            'Expert Analysis & Tips',
-            'Access to Upcoming Features'
-          ]
+          features: ["All Premium Predictions", "Expert Analysis & Tips", "Access to Upcoming Features"],
         },
         {
-          id: 'quarterly',
-          name: 'Quarterly Premium',
+          id: "quarterly",
+          name: "Quarterly Premium",
           duration: 90,
           price: 120,
           active: true,
           features: [
-            'All Premium Predictions',
-            'Expert Analysis & Tips',
-            'Access to Upcoming Features',
-            'Priority Customer Support'
-          ]
-        }];
-      }
-      
-      return true;
-    } catch (error) {
-      console.error('Error loading pricing data:', error);
-      // Fallback to default values if there's an error
-      this.pricingData = [
-      {
-        id: 'monthly',
-        name: 'Monthly Premium',
-        duration: 30,
-        price: 50,
-        active: true,
-        features: [
-          'All Premium Predictions',
-          'Expert Analysis & Tips',
-          'Access to Upcoming Features'
-        ]
-      },
-      {
-        id: 'quarterly',
-        name: 'Quarterly Premium',
-        duration: 90,
-        price: 120,
-        active: true,
-        features: [
-          'All Premium Predictions',
-          'Expert Analysis & Tips',
-          'Access to Upcoming Features',
-          'Priority Customer Support'
-        ]
-      }];
-      return true; // Return true to continue rendering with fallback data
+            "All Premium Predictions",
+            "Expert Analysis & Tips",
+            "Access to Upcoming Features",
+            "Priority Customer Support",
+          ],
+        },
+      ]
+      console.log("Using fallback pricing data due to error:", this.pricingData)
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve(true)
+        }, 600)
+      })
     }
   }
-  
-  /**
-   * Convert pricing data object to array
-   */
+
   convertToArray(pricingData) {
-    if (!pricingData) return [];
-    
+    if (!pricingData) return []
+
     // If it's already an array, return it
-    if (Array.isArray(pricingData)) return pricingData;
-    
-    // Convert object to array
-    return Object.keys(pricingData).map(key => ({
+    if (Array.isArray(pricingData)) return pricingData
+
+    // Convert object to array, preserving the original keys as 'id'
+    return Object.keys(pricingData).map((key) => ({
       id: key,
-      ...pricingData[key]
-    }));
+      ...pricingData[key],
+    }))
   }
-  
-  /**
-   * Get active plans sorted by price
-   */
+
   getActivePlans() {
     if (!this.pricingData || !Array.isArray(this.pricingData)) {
-      return [];
+      return []
     }
-    
+
     // Filter active plans and sort by price
-    return this.pricingData
-      .filter(plan => plan.active)
-      .sort((a, b) => a.price - b.price);
+    return this.pricingData.filter((plan) => plan.active).sort((a, b) => a.price - b.price)
   }
-  
-  /**
-   * Calculate savings amount for a plan
-   * @param {Object} plan - The plan object
-   * @returns {number} - The amount saved compared to monthly equivalent
-   */
+
   calculateSavings(plan) {
-    if (!plan || plan.duration <= 30) return 0;
-    
+    if (!plan || plan.duration <= 30) return 0
+
     // Find the monthly plan
-    const monthlyPlan = this.pricingData.find(p =>
-      p.active && p.duration <= 30 && p.duration >= 28
-    );
-    
-    if (!monthlyPlan) return 0;
-    
+    const monthlyPlan = this.pricingData.find((p) => p.active && p.duration <= 30 && p.duration >= 28)
+
+    if (!monthlyPlan) return 0
+
     // Calculate equivalent monthly cost
-    const monthsCount = plan.duration / 30;
-    const equivalentMonthlyTotal = monthlyPlan.price * monthsCount;
-    
+    const monthsCount = plan.duration / 30
+    const equivalentMonthlyTotal = monthlyPlan.price * monthsCount
+
     // Calculate savings
-    return Math.round(equivalentMonthlyTotal - plan.price);
+    return Math.round(equivalentMonthlyTotal - plan.price)
   }
-  
+
   async getContent() {
-    const activePlans = this.getActivePlans();
-    
+    console.log("Starting getContent for pricing page")
+    const activePlans = this.getActivePlans()
+
     // If no active plans, show a message
     if (activePlans.length === 0) {
       return `
@@ -221,12 +217,12 @@ export class PricingPage extends Page {
             <p>Pricing information will be available shortly.</p>
           </div>
         </div>
-      `;
+      `
     }
-    
+
     // Generate pricing cards HTML
-    const pricingCardsHtml = activePlans.map(plan => this.renderPricingCard(plan)).join('');
-    
+    const pricingCardsHtml = activePlans.map((plan) => this.renderPricingCard(plan)).join("")
+
     return `
       <div class="pcg-container">
         <div class="pcg-header">
@@ -295,46 +291,44 @@ export class PricingPage extends Page {
           </div>
         </div>
       </div>
-    `;
+    `
   }
-  
-  /**
-   * Render a pricing card for a plan
-   * @param {Object} plan - The plan object
-   * @returns {string} - HTML for the pricing card
-   */
+
   renderPricingCard(plan) {
-    if (!plan) return '';
-    
-    const buttonState = this.isButtonDisabled ? "disabled" : "";
-    const isQuarterly = plan.duration >= 90;
-    const savingsAmount = this.calculateSavings(plan);
-    
+    if (!plan) return ""
+
+    const isQuarterly = plan.duration >= 90
+    const savingsAmount = this.calculateSavings(plan)
+
     // Determine if this is the featured plan (the one with the longest duration)
-    const isFeatured = plan === this.getActivePlans().reduce((a, b) =>
-      a.duration > b.duration ? a : b, { duration: 0 });
-    
+    const isFeatured =
+      plan === this.getActivePlans().reduce((a, b) => (a.duration > b.duration ? a : b), { duration: 0 })
+
     // Generate features HTML
-    const featuresHtml = (plan.features || []).map(feature => `
+    const featuresHtml = (plan.features || [])
+      .map(
+        (feature) => `
       <div class="pcg-feature">
         <i class="fas fa-check-circle"></i>
         <span>${this.escapeHtml(feature)}</span>
       </div>
-    `).join('');
-    
+    `,
+      )
+      .join("")
+
     // Format price period text
-    let periodText = '/month';
+    let periodText = "/month"
     if (plan.duration >= 90 && plan.duration < 180) {
-      periodText = '/3 months';
+      periodText = "/3 months"
     } else if (plan.duration >= 180 && plan.duration < 365) {
-      periodText = '/6 months';
+      periodText = "/6 months"
     } else if (plan.duration >= 365) {
-      periodText = '/year';
+      periodText = "/year"
     }
-    
+
     return `
-      <div class="pcg-card ${isFeatured ? 'pcg-featured' : ''}">
-        ${isFeatured ? '<div class="pcg-popular-tag">Best Value</div>' : ''}
+      <div class="pcg-card ${isFeatured ? "pcg-featured" : ""}">
+        ${isFeatured ? '<div class="pcg-popular-tag">Best Value</div>' : ""}
         <div class="pcg-card-header">
           <div class="pcg-plan-name">${this.escapeHtml(plan.name)}</div>
           <div class="pcg-plan-duration">${plan.duration} Days Access</div>
@@ -344,95 +338,159 @@ export class PricingPage extends Page {
           <span class="pcg-amount">${plan.price}</span>
           <span class="pcg-period">${periodText}</span>
         </div>
-        ${savingsAmount > 0 ? `<div class="pcg-savings">Save ₵${savingsAmount}</div>` : ''}
+        ${savingsAmount > 0 ? `<div class="pcg-savings">Save ₵${savingsAmount}</div>` : ""}
         <div class="pcg-features">
           ${featuresHtml}
         </div>
         <div class="pcg-button-container">
-          <button id="subscribe-${plan.id}" class="pcg-subscribe-btn" ${buttonState} data-plan="${plan.id}">
+          <button class="pcg-subscribe-btn" data-plan="${plan.id}">
             Subscribe Now
           </button>
         </div>
       </div>
-    `;
+    `
   }
-  
+
+  async afterStructureRender() {
+    console.log("afterStructureRender called for pricing page")
+    await super.afterStructureRender()
+  }
+
   async afterContentRender() {
-    // Set up event listeners for subscription buttons
-    const subscribeButtons = this.container.querySelectorAll(".pcg-subscribe-btn");
-    subscribeButtons.forEach(button => {
-      button.addEventListener("click", (e) => {
-        const planId = e.currentTarget.dataset.plan;
-        this.handleSubscription(planId);
-      });
-    });
-    
-    // Set up FAQ toggles
-    const faqQuestions = this.container.querySelectorAll(".pcg-faq-question");
-    faqQuestions.forEach((question) => {
-      question.addEventListener("click", () => {
-        const faqId = question.getAttribute("data-faq");
-        const answer = this.container.querySelector(`#faq-${faqId}`);
-        
-        if (answer) {
-          answer.classList.toggle("pcg-faq-answer-open");
-          question.classList.toggle("pcg-faq-question-open");
-        }
-      });
-    });
+    console.log("afterContentRender called for pricing page")
+    this.setupEventListeners()
   }
-  
-  handleSubscription(planId) {
-    // Find the plan in our data
-    const plan = this.pricingData.find(p => p.id === planId);
-    if (!plan) {
-      console.error(`Plan with ID ${planId} not found`);
-      return;
+
+  setupEventListeners() {
+    console.log("Setting up event listeners for pricing page")
+
+    // Set up event listeners for subscription buttons
+    const subscribeButtons = this.container.querySelectorAll(".pcg-subscribe-btn")
+    console.log(`Found ${subscribeButtons.length} subscribe buttons`)
+
+    subscribeButtons.forEach((button) => {
+      // Remove existing listeners to prevent duplicates
+      const newButton = button.cloneNode(true)
+      button.parentNode.replaceChild(newButton, button)
+
+      newButton.addEventListener("click", (e) => {
+        console.log("Subscribe button clicked:", e.currentTarget.dataset.plan)
+        const planId = e.currentTarget.dataset.plan
+        this.handleSubscription(planId, newButton)
+      })
+    })
+
+    // Set up FAQ toggles
+    const faqQuestions = this.container.querySelectorAll(".pcg-faq-question")
+    console.log(`Found ${faqQuestions.length} FAQ questions`)
+
+    faqQuestions.forEach((question) => {
+      // Remove existing listeners to prevent duplicates
+      const newQuestion = question.cloneNode(true)
+      question.parentNode.replaceChild(newQuestion, question)
+
+      newQuestion.addEventListener("click", () => {
+        const faqId = newQuestion.getAttribute("data-faq")
+        console.log("FAQ question clicked:", faqId)
+        this.toggleFAQ(faqId, newQuestion)
+      })
+    })
+  }
+
+  toggleFAQ(faqId, questionElement) {
+    const answer = this.container.querySelector(`#faq-${faqId}`)
+
+    if (answer) {
+      answer.classList.toggle("pcg-faq-answer-open")
+      questionElement.classList.toggle("pcg-faq-question-open")
     }
-    
-    // Get the button that was clicked
-    const button = this.container.querySelector(`#subscribe-${planId}`);
-    
-    if (button) {
-      // Disable all buttons to prevent multiple clicks
-      this.toggleButtonState(true);
-      
-      // Replace button text with spinner
-      const originalText = button.innerHTML;
-      button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-      
-      // Show toast notification
+  }
+
+  handleSubscription(planId, buttonElement) {
+    console.log("handleSubscription called with planId:", planId)
+
+    // Find the plan in our data
+    const plan = this.pricingData.find((p) => p.id === planId)
+    if (!plan) {
+      console.error(`Plan with ID ${planId} not found in pricing data:`, this.pricingData)
       if (window.app && window.app.showToast) {
-        window.app.showToast(`Processing ${plan.name} subscription...`, "info");
+        window.app.showToast("Error: Selected plan not found", "error")
       }
-      
+      return
+    }
+
+    // Disable the clicked button to prevent multiple clicks
+    if (buttonElement) {
+      // Store original text and disable button
+      const originalText = buttonElement.innerHTML
+      buttonElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...'
+      buttonElement.disabled = true
+
+      // Also disable all other buttons
+      this.toggleAllButtons(true)
+
+      // Show toast notification with shorter duration (1.5s)
+      if (window.app && window.app.showToast) {
+        window.app.showToast(`Processing ${plan.name} subscription...`, "info", 1500)
+      }
+
       // Determine the redirect URL based on the plan
-      // For backward compatibility, use tab=1 for monthly and tab=2 for quarterly/longer plans
-      const tabId = plan.duration <= 30 ? "1" : "2";
-      const redirectUrl = `/upgrade?tab=${tabId}&plan=${planId}`;
-      
-      // Wait 1.5 seconds before redirecting (reduced from 3 seconds for better UX)
+      const tabId = plan.duration <= 30 ? "1" : "2"
+      const redirectUrl = `/upgrade?tab=${tabId}&plan=${planId}`
+
+      // Wait 1.5 seconds before redirecting for better UX
       setTimeout(() => {
         // Navigate to subscription processing page
         if (window.app && window.app.navigateTo) {
-          window.app.navigateTo(redirectUrl);
+          console.log("Navigating to:", redirectUrl)
+          window.app.navigateTo(redirectUrl)
         } else {
-          console.error("Navigation function not available");
-          
+          console.error("Navigation function not available")
+
           // Restore button state if navigation fails
-          button.innerHTML = originalText;
-          this.toggleButtonState(false);
+          buttonElement.innerHTML = originalText
+          buttonElement.disabled = false
+          this.toggleAllButtons(false)
+
+          if (window.app && window.app.showToast) {
+            window.app.showToast("Navigation error. Please try again.", "error")
+          }
         }
-      }, 1500);
+      }, 1500)
     }
   }
-  
-  toggleButtonState(disabled) {
-    this.isButtonDisabled = disabled;
-    
-    const subscribeButtons = this.container.querySelectorAll(".pcg-subscribe-btn");
-    subscribeButtons.forEach(button => {
-      button.disabled = disabled;
-    });
+
+  toggleAllButtons(disabled) {
+    const subscribeButtons = this.container.querySelectorAll(".pcg-subscribe-btn")
+    subscribeButtons.forEach((button) => {
+      button.disabled = disabled
+    })
+  }
+
+  destroy() {
+    console.log("destroy called for pricing page")
+    super.destroy()
+
+    // Clean up event listeners
+    const elements = [
+      { selector: ".pcg-subscribe-btn", event: "click" },
+      { selector: ".pcg-faq-question", event: "click" },
+    ]
+
+    elements.forEach((item) => {
+      if (item.selector) {
+        const elements = this.container?.querySelectorAll(item.selector)
+        if (elements) {
+          elements.forEach((el) => {
+            el.replaceWith(el.cloneNode(true))
+          })
+        }
+      }
+    })
+
+    // Clear references
+    this.container = null
+    this.firebase = null
+    this.pricingData = null
   }
 }
