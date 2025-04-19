@@ -23,7 +23,7 @@ export default class MenuManager {
         title: "Reports",
         items: [
             {
-                path: "#",
+                path: "/adminn",
                 text: "Analytics",
                 icon: "fas fa-chart-line",
                 requiresAuth: false,

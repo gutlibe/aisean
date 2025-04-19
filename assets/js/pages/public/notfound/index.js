@@ -1,83 +1,52 @@
-import { Page } from "../../../core/page.js"
-/**
- * NotFoundPage - 404 Error Page
- * 
- * This page is shown when a user navigates to a route that doesn't exist.
- * It provides an engaging error message with a creative illustration
- * and buttons to navigate back or to the home page.
- */
+import { Page } from "../../../core/page.js";
+
 export class NotFoundPage extends Page {
     constructor() {
-        super(); // Always call the parent constructor
+        super();
         
-        // ===== BASIC CONFIGURATION =====
-        
-        // Hide menu hamburger icon in header for this error page
         this.showMenuIcon = false;
-        
-        // Hide back arrow in header for this error page
         this.showBackArrow = false;
-        
-        // This page doesn't need to fetch data from the database
         this.requiresDatabase = false;
         
-        // ===== AUTHENTICATION SETTINGS =====
-        
-        // Users don't need to be logged in to view this page
-        this.requiresAuth = false;
-        
-        // No user type restrictions for this page
-        this.authorizedUserTypes = [];
-        
-        // Register this page in the global app object
-        if (!window.app) {
-            window.app = {};
-        }
-        if (!window.app.pages) {
-            window.app.pages = {};
-        }
-        window.app.pages.notfound = this;
-        
-        // Track active event listeners for proper cleanup
-        this.activeListeners = new Map();
-        
         this.cssFiles = [
-      "pages/public/404/index.css",
-    ];
+            "pages/public/404/index.css",
+        ];
+        
+        this.activeListeners = new Map();
     }
-
-    /**
-     * Return the page title shown in the header
-     */
+    
     getTitle() {
         return '404 Not Found';
     }
-
-    /**
-     * Return the icon class to display next to the page title
-     */
+    
     getHeaderIcon() {
         return 'fas fa-map-signs';
     }
-
-    /**
-     * Return HTML for the page header action buttons
-     * No actions needed for error page
-     */
+    
     getActions() {
         return '';
     }
-
-    /**
-     * Return the main page content HTML with enhanced visual elements
-     * and responsive text for buttons
-     */
+    
+    getSkeletonTemplate() {
+        return `
+            <div class="notfound-container skeleton-placeholder">
+                <div class="skeleton-pulse" style="width: 80%; height: 40px; margin-bottom: 20px;"></div>
+                <div class="skeleton-pulse" style="width: 60%; height: 20px; margin-bottom: 40px;"></div>
+                <div class="skeleton-pulse" style="width: 100%; height: 150px; margin-bottom: 40px;"></div>
+                <div style="display: flex; gap: 10px;">
+                     <div class="skeleton-pulse" style="width: 100px; height: 40px;"></div>
+                     <div class="skeleton-pulse" style="width: 100px; height: 40px;"></div>
+                </div>
+            </div>
+        `;
+    }
+    
     async getContent() {
         return `
             <div class="notfound-container">
                 <div class="notfound-content">
                     <i class="fas fa-compass notfound-icon"></i>
-                    
+
                     <div class="notfound-illustration">
                         <div class="notfound-path"></div>
                         <div class="notfound-signpost"></div>
@@ -85,17 +54,17 @@ export class NotFoundPage extends Page {
                         <div class="notfound-sign-right">Home</div>
                         <div class="notfound-character"></div>
                     </div>
-                    
+
                     <h2>Oops! Lost in Space</h2>
                     <p>The page you're looking for seems to have wandered off. It might be missing, moved, or never existed in the first place.</p>
-                    
+
                     <div class="notfound-action-buttons">
                         <button class="btn btn-primary" id="homeButton">
-                            <i class="fas fa-home"></i> 
+                            <i class="fas fa-home"></i>
                             <span>Home</span>
                         </button>
                         <button class="btn btn-secondary" id="backButton">
-                            <i class="fas fa-arrow-left"></i> 
+                            <i class="fas fa-arrow-left"></i>
                             <span>Back</span>
                         </button>
                     </div>
@@ -103,38 +72,15 @@ export class NotFoundPage extends Page {
             </div>
         `;
     }
-
-    /**
-     * Called after content is fully rendered
-     */
+    
     async afterContentRender() {
-        // Call parent method first as recommended in documentation
         await super.afterContentRender();
-        
-        // Setup action buttons
         this.setupActionButtons();
-        
-        // Add resize handler for responsive text
-        this.handleResponsiveDisplay();
-        window.addEventListener('resize', this.handleResponsiveDisplay.bind(this));
-        this.activeListeners.set(window, this.handleResponsiveDisplay.bind(this));
     }
     
-    /**
-     * Handle responsive text display for buttons based on screen size
-     */
-    handleResponsiveDisplay() {
-        // No need to implement complex logic here as we're using CSS media queries
-        // This method is mainly a placeholder if additional JS-based responsive 
-        // adjustments are needed in the future
-    }
-
-    /**
-     * Setup event listeners for the action buttons
-     */
     setupActionButtons() {
-        const homeButton = this.container.querySelector('#homeButton');
-        const backButton = this.container.querySelector('#backButton');
+        const homeButton = this.container?.querySelector('#homeButton');
+        const backButton = this.container?.querySelector('#backButton');
         
         if (homeButton) {
             const homeClickHandler = (e) => {
@@ -142,13 +88,11 @@ export class NotFoundPage extends Page {
                 this.navigateToHome();
             };
             
-            // Remove existing listener if present
             const existingHomeListener = this.activeListeners.get(homeButton);
             if (existingHomeListener) {
                 homeButton.removeEventListener('click', existingHomeListener);
             }
             
-            // Add new listener
             homeButton.addEventListener('click', homeClickHandler);
             this.activeListeners.set(homeButton, homeClickHandler);
         }
@@ -159,59 +103,40 @@ export class NotFoundPage extends Page {
                 this.goBack();
             };
             
-            // Remove existing listener if present
             const existingBackListener = this.activeListeners.get(backButton);
             if (existingBackListener) {
                 backButton.removeEventListener('click', existingBackListener);
             }
             
-            // Add new listener
             backButton.addEventListener('click', backClickHandler);
             this.activeListeners.set(backButton, backClickHandler);
         }
     }
-
-    /**
-     * Navigate to home page
-     */
+    
     navigateToHome() {
         if (window.app && typeof window.app.navigateTo === 'function') {
             window.app.navigateTo('/');
+        } else {
+            console.warn('App navigation function not available.');
         }
     }
     
-    /**
-     * Go back to previous page
-     */
     goBack() {
         window.history.back();
     }
-
-    /**
-     * Clean up resources when navigating away from page
-     */
+    
     destroy() {
-        // Call parent destroy method first as required
-        super.destroy();
-        
-        // Clean up event listeners
         this.activeListeners.forEach((listener, element) => {
-            if (element) {
-                if (element === window) {
-                    window.removeEventListener('resize', listener);
-                } else {
+            if (element && typeof element.removeEventListener === 'function') {
+                try {
                     element.removeEventListener('click', listener);
+                } catch (error) {
+                    console.warn('Error removing listener during destroy:', error, element);
                 }
             }
         });
         this.activeListeners.clear();
         
-        // Remove global reference
-        if (window.app?.pages?.notfound === this) {
-            delete window.app.pages.notfound;
-        }
-        
-        // Clear container reference
-        this.container = null;
+        super.destroy();
     }
 }

@@ -364,22 +364,50 @@ class App {
       }
 
       const isValid = routeManager.isValidRoute(path)
-      const targetPath = isValid ? path : routeManager.getFallbackRoute()
-
+      
+      // If the route is not valid, directly navigate to the 404 page
+      if (!isValid) {
+        const notFoundPath = "/404"
+        
+        // Update browser URL to the 404 page
+        window.history.pushState({ url: notFoundPath }, "", notFoundPath)
+        
+        if (this.router) {
+          this.router.showNavigationIndicator()
+        }
+        
+        if (this.cssManager) {
+          try {
+            await this.cssManager.loadPageStyle(notFoundPath)
+          } catch (cssError) {
+            console.error(`App: Failed to load CSS for ${notFoundPath}:`, cssError)
+          }
+        }
+        
+        if (this.router) {
+          // Use the router's loadNotFoundPage method directly
+          await this.router.loadNotFoundPage()
+          this.isNavigating = false
+          clearTimeout(this.navigationTimeout)
+          return
+        }
+      }
+      
+      // For valid routes, continue with normal navigation
       if (this.router) {
         this.router.showNavigationIndicator()
       }
 
       if (this.cssManager) {
         try {
-          await this.cssManager.loadPageStyle(targetPath)
+          await this.cssManager.loadPageStyle(path)
         } catch (cssError) {
-          console.error(`App: Failed to load CSS for ${targetPath}:`, cssError)
+          console.error(`App: Failed to load CSS for ${path}:`, cssError)
         }
       }
 
       if (this.router) {
-        this.router.navigateTo(targetPath)
+        this.router.navigateTo(path)
       } else {
         toastManager.show("Navigation system is unavailable", "error")
         console.error("App: Router not available for navigation!")
