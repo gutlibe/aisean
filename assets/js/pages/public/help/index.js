@@ -1,74 +1,122 @@
-import { Page } from "../../../core/page.js";
+import { Page } from "../../../core/page.js"
 
 /**
  * HelpPage - Help and support page for AIsean application
  */
 export class HelpPage extends Page {
-    constructor() {
-        super();
+  constructor() {
+    super()
 
-        // Define properties in constructor instead of using class fields
-        this.showMenuIcon = true;
-        this.showBackArrow = false;
-        this.requiresDatabase = true; // Fetch config from DB now
-        this.requiresAuth = false;
+    // Basic configuration
+    this.showMenuIcon = true
+    this.showBackArrow = false
 
-        this.botToken = null; // Initialize botToken
-        this.chatId = null; // Initialize chatId
+    // Database configuration
+    this.requiresDatabase = true
+    this.loadingTimeout = 20000 // 20 seconds
+    this.maxRetries = 2
+    this.retryDelay = 1000
 
-        this.cssFiles = [
-            "pages/public/help/index.css",
-        ];
-    }
+    // Telegram bot configuration (will be loaded from database)
+    this.botToken = null
+    this.chatId = null
 
-    getTitle() {
-        return "Help & Support";
-    }
+    // CSS files to load
+    this.cssFiles = ["pages/public/help/index.css"]
+  }
 
-    getHeaderIcon() {
-        return "fas fa-question-circle";
-    }
+  /**
+   * Return the page title shown in the header
+   */
+  getTitle() {
+    return "Help & Support"
+  }
 
-    getSkeletonTemplate() {
-        return `
-            <div class="hp-skeleton-container">
-                <div class="hp-skeleton-item pulse"></div>
-                <div class="hp-skeleton-item pulse"></div>
-                <div class="hp-skeleton-item pulse"></div>
-                <div class="hp-skeleton-form pulse"></div>
+  /**
+   * Return the icon to display next to the page title
+   */
+  getHeaderIcon() {
+    return "fas fa-question-circle"
+  }
+
+  /**
+   * Return skeleton template HTML shown during loading
+   * This provides a better loading experience with placeholders
+   */
+  getSkeletonTemplate() {
+    return `
+            <div class="hp-container">
+                <div class="hp-section">
+                    <h2 class="hp-section-title skeleton-pulse"></h2>
+                    
+                    <div class="hp-accordion">
+                        <div class="hp-accordion-item skeleton-pulse"></div>
+                        <div class="hp-accordion-item skeleton-pulse"></div>
+                        <div class="hp-accordion-item skeleton-pulse"></div>
+                    </div>
+                </div>
+                
+                <div class="hp-section">
+                    <h2 class="hp-section-title skeleton-pulse"></h2>
+                    <p class="hp-section-description skeleton-pulse"></p>
+                    
+                    <form class="hp-form">
+                        <div class="hp-form-group skeleton-pulse"></div>
+                        <div class="hp-form-group skeleton-pulse"></div>
+                        <div class="hp-form-group skeleton-pulse"></div>
+                        <div class="hp-form-group skeleton-pulse"></div>
+                        <div class="skeleton-pulse" style="height: 40px; width: 150px; margin-top: 20px;"></div>
+                    </form>
+                </div>
+                
+                <div class="hp-section">
+                    <h2 class="hp-section-title skeleton-pulse"></h2>
+                    <div class="hp-contact-info">
+                        <div class="hp-contact-item skeleton-pulse"></div>
+                        <div class="hp-contact-item skeleton-pulse"></div>
+                    </div>
+                </div>
             </div>
-        `;
-    }
+        `
+  }
 
-    async loadDatabaseContent() {
-        try {
-            const firebase = window.app.getLibrary('firebase');
-            const db = firebase.getDatabase();
-            const configRef = firebase.ref(db, 'configs');
-            const snapshot = await firebase.get(configRef);
+  /**
+   * Load data from database
+   * This method is called during the render lifecycle if requiresDatabase is true
+   */
+  async loadDatabaseContent() {
+    try {
+      const firebase = window.app.getLibrary("firebase")
+      const db = firebase.getDatabase()
+      const configRef = firebase.ref(db, "configs")
+      const snapshot = await firebase.get(configRef)
 
-            if (snapshot.exists()) {
-                const config = snapshot.val();
-                // Access telegram configuration correctly based on the database structure
-                if (config.telegram) {
-                    this.botToken = config.telegram.bot_token || null;
-                    this.chatId = config.telegram.chat_id || null;
-                } else {
-                    console.warn('Telegram configuration not found in Firebase Realtime Database');
-                }
-            } else {
-                console.warn('No config found in Firebase Realtime Database at /configs');
-            }
-            return true;
-        } catch (error) {
-            console.error('Error fetching config from Firebase:', error);
-            window.app.showToast("Failed to load help configuration.", "error");
-            return false;
+      if (snapshot.exists()) {
+        const config = snapshot.val()
+        // Access telegram configuration correctly based on the database structure
+        if (config.telegram) {
+          this.botToken = config.telegram.bot_token || null
+          this.chatId = config.telegram.chat_id || null
+        } else {
+          console.warn("Telegram configuration not found in Firebase Realtime Database")
         }
+      } else {
+        console.warn("No config found in Firebase Realtime Database at /configs")
+      }
+      return true
+    } catch (error) {
+      console.error("Error fetching config from Firebase:", error)
+      window.app.showToast("Failed to load help configuration.", "error")
+      return false
     }
+  }
 
-    async getContent() {
-        return `
+  /**
+   * Return the main page content HTML
+   * This is called after data is loaded
+   */
+  async getContent() {
+    return `
             <div class="hp-container">
                 <div class="hp-section">
                     <h2 class="hp-section-title">Frequently Asked Questions</h2>
@@ -212,93 +260,131 @@ export class HelpPage extends Page {
                     </div>
                 </div>
             </div>
-        `;
+        `
+  }
+
+  /**
+   * Called after the page structure (header and skeleton) is rendered
+   * Use for setting up structure-level event listeners
+   */
+  async afterStructureRender() {
+    // Always call parent method first
+    await super.afterStructureRender()
+
+    // Additional structure-level setup if needed
+    // This runs before content is loaded, so we can set up listeners
+    // for elements that are part of the skeleton template
+  }
+
+  /**
+   * Called after the main content is rendered
+   * Use for setting up content-level event listeners
+   */
+  async afterContentRender() {
+    // Set up accordion functionality
+    const accordionHeaders = this.container.querySelectorAll(".hp-accordion-header")
+    accordionHeaders.forEach((header) => {
+      header.addEventListener("click", () => this.toggleAccordion(header))
+    })
+
+    // Set up feedback form submission
+    const feedbackForm = this.container.querySelector("#hp-feedback-form")
+    if (feedbackForm) {
+      feedbackForm.addEventListener("submit", (e) => this.handleFeedbackSubmit(e))
+    }
+  }
+
+  /**
+   * Toggle accordion open/closed state
+   */
+  toggleAccordion(header) {
+    const accordionItem = header.parentElement
+    const isOpen = accordionItem.classList.contains("hp-open")
+
+    // Close all accordion items
+    const allAccordionItems = this.container.querySelectorAll(".hp-accordion-item")
+    allAccordionItems.forEach((item) => {
+      item.classList.remove("hp-open")
+      const icon = item.querySelector(".hp-accordion-header i")
+      if (icon) icon.className = "fas fa-chevron-down"
+    })
+
+    // Open the clicked item if it was closed
+    if (!isOpen) {
+      accordionItem.classList.add("hp-open")
+      const icon = header.querySelector("i")
+      if (icon) icon.className = "fas fa-chevron-up"
+    }
+  }
+
+  /**
+   * Handle feedback form submission
+   */
+  async handleFeedbackSubmit(e) {
+    e.preventDefault()
+
+    // Get form inputs
+    const nameInput = this.container.querySelector("#feedback-name")
+    const emailInput = this.container.querySelector("#feedback-email")
+    const typeInput = this.container.querySelector("#feedback-type")
+    const messageInput = this.container.querySelector("#feedback-message")
+
+    // Validate form
+    if (!nameInput.value || !emailInput.value || !typeInput.value || !messageInput.value) {
+      window.app.showToast("Please fill in all required fields", "error")
+      return
     }
 
-    async afterContentRender() {
-        const accordionHeaders = this.container.querySelectorAll(".hp-accordion-header");
-        accordionHeaders.forEach((header) => {
-            header.addEventListener("click", () => this.toggleAccordion(header));
-        });
-
-        const feedbackForm = this.container.querySelector("#hp-feedback-form");
-        if (feedbackForm) {
-            feedbackForm.addEventListener("submit", (e) => this.handleFeedbackSubmit(e));
-        }
+    // Prepare feedback data
+    const feedbackData = {
+      name: nameInput.value,
+      email: emailInput.value,
+      type: typeInput.value,
+      message: messageInput.value,
+      timestamp: new Date().toISOString(),
+      appVersion: window.app.version || "Unknown",
     }
 
-    toggleAccordion(header) {
-        const accordionItem = header.parentElement;
-        const isOpen = accordionItem.classList.contains("hp-open");
+    try {
+      // Update button state to show loading
+      const submitBtn = this.container.querySelector(".hp-submit-btn")
+      const originalBtnText = submitBtn.innerHTML
+      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...'
+      submitBtn.disabled = true
 
-        const allAccordionItems = this.container.querySelectorAll(".hp-accordion-item");
-        allAccordionItems.forEach((item) => {
-            item.classList.remove("hp-open");
-            const icon = item.querySelector(".hp-accordion-header i");
-            if (icon) icon.className = "fas fa-chevron-down";
-        });
+      // Send feedback to Telegram
+      await this.sendFeedbackToTelegram(feedbackData)
 
-        if (!isOpen) {
-            accordionItem.classList.add("hp-open");
-            const icon = header.querySelector("i");
-            if (icon) icon.className = "fas fa-chevron-up";
-        }
+      // Reset form and show success message
+      e.target.reset()
+      window.app.showToast("Thank you for your feedback!", "success")
+
+      // Restore button state
+      submitBtn.innerHTML = originalBtnText
+      submitBtn.disabled = false
+    } catch (error) {
+      console.error("Error sending feedback:", error)
+      window.app.showToast("Failed to send feedback. Please try again later.", "error")
+
+      // Restore button state
+      const submitBtn = this.container.querySelector(".hp-submit-btn")
+      submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Feedback'
+      submitBtn.disabled = false
+    }
+  }
+
+  /**
+   * Send feedback to Telegram bot
+   */
+  async sendFeedbackToTelegram(feedbackData) {
+    if (!this.botToken || !this.chatId) {
+      console.warn("Bot token or Chat ID not configured.")
+      window.app.showToast("Bot configuration missing. Feedback can't be sent.", "warning")
+      return
     }
 
-    async handleFeedbackSubmit(e) {
-        e.preventDefault();
-
-        const nameInput = this.container.querySelector("#feedback-name");
-        const emailInput = this.container.querySelector("#feedback-email");
-        const typeInput = this.container.querySelector("#feedback-type");
-        const messageInput = this.container.querySelector("#feedback-message");
-
-        if (!nameInput.value || !emailInput.value || !typeInput.value || !messageInput.value) {
-            window.app.showToast("Please fill in all required fields", "error");
-            return;
-        }
-
-        const feedbackData = {
-            name: nameInput.value,
-            email: emailInput.value,
-            type: typeInput.value,
-            message: messageInput.value,
-            timestamp: new Date().toISOString(),
-            appVersion: window.app.version || "Unknown",
-        };
-
-        try {
-            const submitBtn = this.container.querySelector(".hp-submit-btn");
-            const originalBtnText = submitBtn.innerHTML;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
-            submitBtn.disabled = true;
-
-            await this.sendFeedbackToTelegram(feedbackData);
-
-            e.target.reset();
-
-            window.app.showToast("Thank you for your feedback!", "success");
-
-            submitBtn.innerHTML = originalBtnText;
-            submitBtn.disabled = false;
-        } catch (error) {
-            console.error("Error sending feedback:", error);
-            window.app.showToast("Failed to send feedback. Please try again later.", "error");
-
-            const submitBtn = this.container.querySelector(".hp-submit-btn");
-            submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Feedback';
-            submitBtn.disabled = false;
-        }
-    }
-
-    async sendFeedbackToTelegram(feedbackData) {
-        if (!this.botToken || !this.chatId) {
-            console.warn("Bot token or Chat ID not configured.");
-            window.app.showToast("Bot configuration missing. Feedback can't be sent.", "warning");
-            return;
-        }
-
-        const message = `
+    // Format message for Telegram
+    const message = `
 📬 New Feedback Received
 
 👤 From: ${feedbackData.name}
@@ -309,31 +395,40 @@ export class HelpPage extends Page {
 
 💬 Message:
 ${feedbackData.message}
-`;
+`
 
-        const telegramUrl = `https://api.telegram.org/bot${this.botToken}/sendMessage`;
-        const response = await fetch(telegramUrl, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                chat_id: this.chatId,
-                text: message,
-                parse_mode: "HTML",
-            }),
-        });
+    // Send to Telegram API
+    const telegramUrl = `https://api.telegram.org/bot${this.botToken}/sendMessage`
+    const response = await fetch(telegramUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        chat_id: this.chatId,
+        text: message,
+        parse_mode: "HTML",
+      }),
+    })
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Telegram API error: ${errorData.description || "Unknown error"}`);
-        }
-
-        return await response.json();
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(`Telegram API error: ${errorData.description || "Unknown error"}`)
     }
 
-    destroy() {
-        super.destroy();
-        this.container = null;
-    }
+    return await response.json()
+  }
+
+  /**
+   * Clean up resources when the page is destroyed
+   */
+  destroy() {
+    // Always call parent method first
+    super.destroy()
+
+    // Clean up references
+    this.botToken = null
+    this.chatId = null
+    this.container = null
+  }
 }

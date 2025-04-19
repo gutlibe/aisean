@@ -1,14 +1,9 @@
-/* Help Page Styles */
-/* Using hp- prefix for all class names as required */
-
-/* Container */
 .hp-container {
   padding: 16px;
   max-width: 800px;
   margin: 0 auto;
 }
 
-/* Sections */
 .hp-section {
   margin-bottom: 32px;
   background-color: var(--card-bg);
@@ -29,7 +24,6 @@
   margin-bottom: 24px;
 }
 
-/* Accordion */
 .hp-accordion {
   border-radius: 8px;
   overflow: hidden;
@@ -81,7 +75,6 @@
   border-top: 1px solid var(--divider);
 }
 
-/* FAQ Items */
 .hp-faq-item {
   margin-bottom: 20px;
 }
@@ -115,7 +108,6 @@
   margin-bottom: 4px;
 }
 
-/* Form */
 .hp-form {
   display: flex;
   flex-direction: column;
@@ -179,7 +171,6 @@
   cursor: not-allowed;
 }
 
-/* Contact Information */
 .hp-contact-info {
   display: flex;
   flex-direction: column;
@@ -220,56 +211,73 @@
   opacity: 0.8;
 }
 
-/* Skeleton Loading */
-.hp-skeleton-container {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  padding: 16px;
-}
-
-.hp-skeleton-item {
-  height: 120px;
+.skeleton-pulse {
   background-color: var(--menu-hover);
-  border-radius: 8px;
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
 }
 
-.hp-skeleton-form {
-  height: 300px;
-  background-color: var(--menu-hover);
-  border-radius: 8px;
+.skeleton-pulse::after {
+  content: "";
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  animation: skeleton-loading 1.5s infinite;
 }
 
-.pulse {
-  animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
+@keyframes skeleton-loading {
   0% {
-    opacity: 0.6;
+    transform: translateX(-100%);
   }
-  50% {
-    opacity: 0.3;
-  }
+  
   100% {
-    opacity: 0.6;
+    transform: translateX(100%);
   }
 }
 
-/* Responsive Design */
+.hp-section-title.skeleton-pulse {
+  height: 32px;
+  width: 60%;
+  margin-bottom: 24px;
+}
+
+.hp-section-description.skeleton-pulse {
+  height: 20px;
+  width: 80%;
+  margin-bottom: 24px;
+}
+
+.hp-accordion-item.skeleton-pulse {
+  height: 60px;
+  margin-bottom: 12px;
+}
+
+.hp-form-group.skeleton-pulse {
+  height: 70px;
+}
+
+.hp-contact-item.skeleton-pulse {
+  height: 80px;
+}
+
 @media (max-width: 768px) {
   .hp-container {
     padding: 12px;
   }
-
+  
   .hp-section {
     padding: 16px;
   }
-
+  
   .hp-contact-info {
     flex-direction: column;
   }
-
+  
   .hp-contact-item {
     width: 100%;
   }
@@ -280,9 +288,8 @@
     flex-direction: row;
     flex-wrap: wrap;
   }
-
+  
   .hp-contact-item {
     width: calc(50% - 8px);
   }
 }
-

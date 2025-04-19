@@ -3,7 +3,7 @@ import { Page } from "../../../core/page.js"
 export class PricingPage extends Page {
   constructor() {
     super()
-    this.showMenuIcon = false
+    this.showMenuIcon = true
     this.showBackArrow = true
     this.requiresDatabase = true
     this.requiresAuth = false
