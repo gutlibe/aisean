@@ -7,13 +7,16 @@ import { FootballCacheManager } from "./utils/cache-manager.js"
 export class FootballPage extends Page {
   constructor() {
     super()
+
+    // Basic configuration
     this.showMenuIcon = true
     this.showBackArrow = true
     this.requiresDatabase = true
-    this.requiresAuth = true
-    this.authorizedUserTypes = ['Admin', 'Pro']
     this.showProfileAvatar = true
-    this.showUpgradeButton = false;
+    this.showUpgradeButton = false
+
+    // CSS configuration
+    this.cssFiles = ["pages/public/premium/index.css"]
 
     // Initialize managers
     this.dataManager = new FootballDataManager(this)
@@ -35,49 +38,72 @@ export class FootballPage extends Page {
     this.lastRefreshedTab = null
     this.loadingTabs = new Set()
     this.activeTabRequests = new Map()
-    this.cssFiles = [
-      "pages/public/premium/index.css",
-    ]
   }
 
+  /**
+   * Return the page title shown in the header
+   */
   getTitle() {
     return "Premium"
   }
 
+  /**
+   * Return the icon to display next to the page title
+   */
   getHeaderIcon() {
     return ""
   }
 
+  /**
+   * Return header action buttons
+   */
   getActions() {
-        return `
-            <button class="btn btn-primary" id="expertsBtn">
-                Experts
-            </button>
-        `;
-    }
-    
-    setupCustomActionListeners() {
-        const expertsBtn = this.container.querySelector("#expertsBtn");
-        if (expertsBtn) {
-            expertsBtn.addEventListener("click", () => {
-                window.app.navigateTo('/experts');
-            });
-        }
-    }
+    return `
+        <button class="btn btn-primary" id="expertsBtn">
+            Experts
+        </button>
+    `
+  }
 
+  /**
+   * Set up event listeners for custom action buttons
+   */
+  setupCustomActionListeners() {
+    const expertsBtn = this.container.querySelector("#expertsBtn")
+    if (expertsBtn) {
+      expertsBtn.addEventListener("click", () => {
+        window.app.navigateTo("/experts")
+      })
+    }
+  }
+
+  /**
+   * Find the tab for today's date
+   */
   findTodayTab() {
     const todayTab = this.dates.find((tab) => tab.type === "today")
     return todayTab ? todayTab.id : "today"
   }
 
+  /**
+   * Return skeleton template HTML shown during loading
+   * This is called during the prepareRender phase
+   */
   getSkeletonTemplate() {
     return this.uiManager.getSkeletonTemplate(this.dates)
   }
 
+  /**
+   * Return loading skeleton cards for dynamic content loading
+   */
   getLoadingSkeletonCards(count = 3) {
     return this.uiManager.getLoadingSkeletonCards(count)
   }
 
+  /**
+   * Load data from database
+   * This is called during the finalizeRender phase if requiresDatabase is true
+   */
   async loadDatabaseContent() {
     const dateKey = this.currentTab
 
@@ -191,10 +217,16 @@ export class FootballPage extends Page {
     }
   }
 
+  /**
+   * Schedule a cache refresh after a delay
+   */
   scheduleCacheRefresh() {
     this.cacheManager.scheduleCacheRefresh(() => this.refreshFromServer())
   }
 
+  /**
+   * Refresh data from server after using cached data
+   */
   async refreshFromServer() {
     // Don't refresh if we didn't use cache or we're no longer on the page
     if (!this.cacheManager.getUsedCacheData() || !this.container) return
@@ -225,11 +257,7 @@ export class FootballPage extends Page {
         }
 
         // Show toast notification about the update
-        window.app.showToast(
-          "Predictions data has been refreshed with the latest information.",
-          "info", 
-          3000
-        )
+        window.app.showToast("Predictions data has been refreshed with the latest information.", "info", 3000)
       }
 
       // Update other UI elements based on hasMore flag
@@ -240,19 +268,50 @@ export class FootballPage extends Page {
     }
   }
 
+  /**
+   * Update the load more UI elements
+   */
   updateLoadMoreUI() {
     this.uiManager.updateLoadMoreUI(this.container, this.predictions, this.hasMore, this.eventManager)
   }
 
+  /**
+   * Get the selected date based on current tab
+   */
   getSelectedDate() {
     const selectedTab = this.dates.find((tab) => tab.id === this.currentTab)
     return selectedTab ? selectedTab.date : new Date()
   }
 
+  /**
+   * Return the main page content HTML
+   * This is called during the finalizeRender phase after data is loaded
+   */
   async getContent() {
     return this.uiManager.getMainContent(this.dates, this.currentTab, this.predictions, this.hasMore)
   }
 
+  /**
+   * Called after the structure (header and skeleton) is rendered
+   * Use for setting up structure-level event listeners
+   */
+  async afterStructureRender() {
+    // Call parent method first
+    await super.afterStructureRender()
+
+    // Set up custom action listeners
+    this.setupCustomActionListeners()
+
+    // If we have cached data, schedule a refresh
+    if (this.cacheManager.hasCache(this.currentTab)) {
+      this.scheduleCacheRefresh()
+    }
+  }
+
+  /**
+   * Called after the main content is rendered
+   * Use for setting up content-level event listeners
+   */
   async afterContentRender() {
     // Clean up existing event listeners before adding new ones
     this.eventManager.removeAllEventListeners()
@@ -271,6 +330,9 @@ export class FootballPage extends Page {
     this.updateLoadMoreUI()
   }
 
+  /**
+   * Load more predictions when the load more button is clicked
+   */
   async loadMore() {
     const currentTab = this.currentTab
 
@@ -320,13 +382,9 @@ export class FootballPage extends Page {
       }
     } catch (error) {
       console.error("Load more error:", error)
-      
+
       // Show error toast notification
-      window.app.showToast(
-        "Failed to fetch more predictions. Please try again later.",
-        "error",
-        5000
-      )
+      window.app.showToast("Failed to fetch more predictions. Please try again later.", "error", 5000)
 
       // Re-enable the button on error
       if (loadMoreBtn) {
@@ -336,6 +394,9 @@ export class FootballPage extends Page {
     }
   }
 
+  /**
+   * Refresh the page content when switching tabs
+   */
   refresh() {
     // Only reset if we've switched tabs
     const previousTab = this.lastRefreshedTab
@@ -390,17 +451,15 @@ export class FootballPage extends Page {
           predictionsGrid.innerHTML =
             '<div class="error-message">Failed to load predictions. Please try again later.</div>'
         }
-        
+
         // Show error toast notification
-        window.app.showToast(
-          "Failed to load predictions data", 
-          "error", 
-          5000,
-          "Loading Error"
-        )
+        window.app.showToast("Failed to load predictions data", "error", 5000, "Loading Error")
       })
   }
 
+  /**
+   * Clean up resources when the page is destroyed
+   */
   destroy() {
     // Clear all timeouts
     if (this.skeletonTimeout) {
@@ -417,6 +476,7 @@ export class FootballPage extends Page {
     this.loadingTabs.clear()
     this.activeTabRequests.clear()
 
+    // Call parent destroy method
     super.destroy()
   }
 }

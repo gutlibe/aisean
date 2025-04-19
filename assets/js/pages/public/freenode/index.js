@@ -7,13 +7,16 @@ import { FootballCacheManager } from "./utils/cache-manager.js"
 export class FootballPage extends Page {
   constructor() {
     super()
+
+    // Basic configuration
     this.showMenuIcon = true
     this.showBackArrow = false
     this.requiresDatabase = true
-    this.requiresAuth = false
-    this.authorizedUserTypes = []
     this.showProfileAvatar = true
     this.showUpgradeButton = true
+
+    // CSS configuration
+    this.cssFiles = ["pages/public/freemium/index.css"]
 
     // Initialize managers
     this.dataManager = new FootballDataManager(this)
@@ -35,178 +38,200 @@ export class FootballPage extends Page {
     this.lastRefreshedTab = null
     this.loadingTabs = new Set()
     this.activeTabRequests = new Map()
-    
-    this.cssFiles = [
-      "pages/public/freemium/index.css",
-    ]
   }
 
-
+  /**
+   * Return the page title shown in the header
+   */
   getTitle() {
     return "Free Predictions"
   }
 
+  /**
+   * Return the icon to display next to the page title
+   */
   getHeaderIcon() {
     return ""
   }
 
+  /**
+   * Return header action buttons
+   */
   getActions() {
     return ``
   }
 
+  /**
+   * Find the tab for today's date
+   */
   findTodayTab() {
     const todayTab = this.dates.find((tab) => tab.type === "today")
     return todayTab ? todayTab.id : "today"
   }
 
+  /**
+   * Return skeleton template HTML shown during loading
+   * This is called during the prepareRender phase
+   */
   getSkeletonTemplate() {
     return this.uiManager.getSkeletonTemplate(this.dates)
   }
 
+  /**
+   * Return loading skeleton cards for dynamic content loading
+   */
   getLoadingSkeletonCards(count = 3) {
     return this.uiManager.getLoadingSkeletonCards(count)
   }
 
+  /**
+   * Load data from database
+   * This is called during the finalizeRender phase if requiresDatabase is true
+   */
   async loadDatabaseContent() {
-  const dateKey = this.currentTab
+    const dateKey = this.currentTab
 
-  // Don't start a new request if one is already in progress for this tab
-  if (this.loadingTabs.has(dateKey)) {
-    return false
-  }
-
-  // Check cache for initial load
-  if (this.cacheManager.hasCache(dateKey) && !this.lastVisible && this.initialPageLoad) {
-    const cachedData = this.cacheManager.getCachedData(dateKey)
-
-    // Set values from cache for initial loads
-    this.predictions = cachedData.predictions
-    this.lastVisible = cachedData.lastVisible
-    this.hasMore = cachedData.hasMore
-    this.cacheManager.setUsedCacheData(true)
-
-    if (this.showSkeletonOnCachedData) {
-      return new Promise((resolve) => {
-        this.skeletonTimeout = setTimeout(() => {
-          resolve(true)
-        }, 300)
-      })
-    }
-
-    return true
-  }
-
-  // Mark this tab as loading
-  this.loadingTabs.add(dateKey)
-  this.isLoading = true
-
-  try {
-    const firebase = window.app.getLibrary("firebase")
-    const selectedDate = this.getSelectedDate()
-    const formattedDate = this.dataManager.formatDateForApi(selectedDate)
-
-    // Check if user is logged in and get user type
-    let userType = null
-    if (window.app.getAuthManager) {
-      const authManager = window.app.getAuthManager()
-      if (authManager) {
-        const user = authManager.getCurrentUser()
-        if (user) {
-          try {
-            const userDoc = await firebase.getDoc(
-              firebase.doc(firebase.firestore, `users/${user.uid}`)
-            )
-            if (userDoc.exists()) {
-              const userData = userDoc.data()
-              userType = userData.userType
-              this.userType = userType // Store the user type in the page object
-            }
-          } catch (error) {
-            console.error("Error fetching user data:", error)
-          }
-        }
-      }
-    }
-
-    const predictionsRef = firebase.collection(
-      firebase.firestore,
-      "predictions",
-      "football",
-      "dates",
-      formattedDate,
-      "matches",
-    )
-
-    // Create a query with the right limit
-    let predictionsQuery = firebase.query(predictionsRef, firebase.limit(this.limit))
-
-    // Add pagination if we're loading more
-    if (this.lastVisible) {
-      predictionsQuery = firebase.query(
-        predictionsRef,
-        firebase.startAfter(this.lastVisible),
-        firebase.limit(this.limit),
-      )
-    }
-
-    const predictionsSnapshot = await firebase.getDocs(predictionsQuery)
-
-    // Only continue if we're still on the same tab
-    if (this.currentTab !== dateKey) {
+    // Don't start a new request if one is already in progress for this tab
+    if (this.loadingTabs.has(dateKey)) {
       return false
     }
 
-    // Update lastVisible for pagination
-    if (predictionsSnapshot.docs.length > 0) {
-      this.lastVisible = predictionsSnapshot.docs[predictionsSnapshot.docs.length - 1]
-    } else {
-      this.hasMore = false
+    // Check cache for initial load
+    if (this.cacheManager.hasCache(dateKey) && !this.lastVisible && this.initialPageLoad) {
+      const cachedData = this.cacheManager.getCachedData(dateKey)
+
+      // Set values from cache for initial loads
+      this.predictions = cachedData.predictions
+      this.lastVisible = cachedData.lastVisible
+      this.hasMore = cachedData.hasMore
+      this.cacheManager.setUsedCacheData(true)
+
+      if (this.showSkeletonOnCachedData) {
+        return new Promise((resolve) => {
+          this.skeletonTimeout = setTimeout(() => {
+            resolve(true)
+          }, 300)
+        })
+      }
+
+      return true
     }
 
-    // Has more only if we got exactly the limit number of documents
-    this.hasMore = predictionsSnapshot.docs.length === this.limit
+    // Mark this tab as loading
+    this.loadingTabs.add(dateKey)
+    this.isLoading = true
 
-    const newPredictions = predictionsSnapshot.docs.map((doc) => {
-      const docData = doc.data()
-      const matchInfo = docData.matchInfo
-      return this.dataManager.processPredictionData(matchInfo)
-    })
+    try {
+      const firebase = window.app.getLibrary("firebase")
+      const selectedDate = this.getSelectedDate()
+      const formattedDate = this.dataManager.formatDateForApi(selectedDate)
 
-    // Append new predictions to existing ones when loading more
-    if (this.lastVisible && this.predictions.length > 0 && this.currentTab === dateKey) {
-      this.predictions = [...this.predictions, ...newPredictions]
-    } else {
-      // Replace predictions on initial load
-      this.predictions = newPredictions
-    }
+      // Check if user is logged in and get user type
+      let userType = null
+      if (window.app.getAuthManager) {
+        const authManager = window.app.getAuthManager()
+        if (authManager) {
+          const user = authManager.getCurrentUser()
+          if (user) {
+            try {
+              const userDoc = await firebase.getDoc(firebase.doc(firebase.firestore, `users/${user.uid}`))
+              if (userDoc.exists()) {
+                const userData = userDoc.data()
+                userType = userData.userType
+                this.userType = userType // Store the user type in the page object
+              }
+            } catch (error) {
+              console.error("Error fetching user data:", error)
+            }
+          }
+        }
+      }
 
-    // Cache the data on first load or when replacing all data
-    if (!this.lastVisible || newPredictions.length === this.predictions.length) {
-      this.cacheManager.setCache(dateKey, {
-        predictions: this.predictions,
-        lastVisible: this.lastVisible,
-        hasMore: this.hasMore,
+      const predictionsRef = firebase.collection(
+        firebase.firestore,
+        "predictions",
+        "football",
+        "dates",
+        formattedDate,
+        "matches",
+      )
+
+      // Create a query with the right limit
+      let predictionsQuery = firebase.query(predictionsRef, firebase.limit(this.limit))
+
+      // Add pagination if we're loading more
+      if (this.lastVisible) {
+        predictionsQuery = firebase.query(
+          predictionsRef,
+          firebase.startAfter(this.lastVisible),
+          firebase.limit(this.limit),
+        )
+      }
+
+      const predictionsSnapshot = await firebase.getDocs(predictionsQuery)
+
+      // Only continue if we're still on the same tab
+      if (this.currentTab !== dateKey) {
+        return false
+      }
+
+      // Update lastVisible for pagination
+      if (predictionsSnapshot.docs.length > 0) {
+        this.lastVisible = predictionsSnapshot.docs[predictionsSnapshot.docs.length - 1]
+      } else {
+        this.hasMore = false
+      }
+
+      // Has more only if we got exactly the limit number of documents
+      this.hasMore = predictionsSnapshot.docs.length === this.limit
+
+      const newPredictions = predictionsSnapshot.docs.map((doc) => {
+        const docData = doc.data()
+        const matchInfo = docData.matchInfo
+        return this.dataManager.processPredictionData(matchInfo)
       })
+
+      // Append new predictions to existing ones when loading more
+      if (this.lastVisible && this.predictions.length > 0 && this.currentTab === dateKey) {
+        this.predictions = [...this.predictions, ...newPredictions]
+      } else {
+        // Replace predictions on initial load
+        this.predictions = newPredictions
+      }
+
+      // Cache the data on first load or when replacing all data
+      if (!this.lastVisible || newPredictions.length === this.predictions.length) {
+        this.cacheManager.setCache(dateKey, {
+          predictions: this.predictions,
+          lastVisible: this.lastVisible,
+          hasMore: this.hasMore,
+        })
+      }
+
+      // After the first page load, we'll always load from DB
+      this.initialPageLoad = false
+
+      return true
+    } catch (error) {
+      console.error("Database error:", error)
+      throw new Error("DATABASE_ERROR")
+    } finally {
+      // Remove this tab from loading tabs
+      this.loadingTabs.delete(dateKey)
+      this.isLoading = false
     }
-
-    // After the first page load, we'll always load from DB
-    this.initialPageLoad = false
-
-    return true
-  } catch (error) {
-    console.error("Database error:", error)
-    throw new Error("DATABASE_ERROR")
-  } finally {
-    // Remove this tab from loading tabs
-    this.loadingTabs.delete(dateKey)
-    this.isLoading = false
   }
-}
 
+  /**
+   * Schedule a cache refresh after a delay
+   */
   scheduleCacheRefresh() {
     this.cacheManager.scheduleCacheRefresh(() => this.refreshFromServer())
   }
 
+  /**
+   * Refresh data from server after using cached data
+   */
   async refreshFromServer() {
     // Don't refresh if we didn't use cache or we're no longer on the page
     if (!this.cacheManager.getUsedCacheData() || !this.container) return
@@ -248,19 +273,47 @@ export class FootballPage extends Page {
     }
   }
 
+  /**
+   * Update the load more UI elements
+   */
   updateLoadMoreUI() {
     this.uiManager.updateLoadMoreUI(this.container, this.predictions, this.hasMore, this.eventManager)
   }
 
+  /**
+   * Get the selected date based on current tab
+   */
   getSelectedDate() {
     const selectedTab = this.dates.find((tab) => tab.id === this.currentTab)
     return selectedTab ? selectedTab.date : new Date()
   }
 
+  /**
+   * Return the main page content HTML
+   * This is called during the finalizeRender phase after data is loaded
+   */
   async getContent() {
     return this.uiManager.getMainContent(this.dates, this.currentTab, this.predictions, this.hasMore)
   }
 
+  /**
+   * Called after the structure (header and skeleton) is rendered
+   * Use for setting up structure-level event listeners
+   */
+  async afterStructureRender() {
+    // Call parent method first
+    await super.afterStructureRender()
+
+    // If we have cached data, schedule a refresh
+    if (this.cacheManager.hasCache(this.currentTab)) {
+      this.scheduleCacheRefresh()
+    }
+  }
+
+  /**
+   * Called after the main content is rendered
+   * Use for setting up content-level event listeners
+   */
   async afterContentRender() {
     // Clean up existing event listeners before adding new ones
     this.eventManager.removeAllEventListeners()
@@ -274,12 +327,15 @@ export class FootballPage extends Page {
     // Set up action buttons
     this.eventManager.setupLoadMoreButton(this)
     this.eventManager.setupScrollToTopButton(this)
-    this.eventManager.setupUpgradeButton(this) // Add this line to set up the upgrade button
+    this.eventManager.setupUpgradeButton(this)
 
     // Update the load more UI after initial render
     this.updateLoadMoreUI()
   }
 
+  /**
+   * Load more predictions when the load more button is clicked
+   */
   async loadMore() {
     const currentTab = this.currentTab
 
@@ -341,6 +397,9 @@ export class FootballPage extends Page {
     }
   }
 
+  /**
+   * Refresh the page content when switching tabs
+   */
   refresh() {
     // Only reset if we've switched tabs
     const previousTab = this.lastRefreshedTab
@@ -401,6 +460,9 @@ export class FootballPage extends Page {
       })
   }
 
+  /**
+   * Clean up resources when the page is destroyed
+   */
   destroy() {
     // Clear all timeouts
     if (this.skeletonTimeout) {
@@ -417,8 +479,7 @@ export class FootballPage extends Page {
     this.loadingTabs.clear()
     this.activeTabRequests.clear()
 
+    // Call parent destroy method
     super.destroy()
   }
 }
-
-
